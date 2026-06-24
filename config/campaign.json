@@ -1,0 +1,11 @@
+{
+  "name": "Arena v1 Launch Campaign",
+  "suite": "Riplo Consulting v1",
+  "case_selector_json": {},
+  "eligible_competitors": [
+    { "slug": "concise-consultant", "version": 1 },
+    { "slug": "gpt5-baseline", "version": 1 }
+  ],
+  "replicates": 1,
+  "matchmaking_strategy": "coverage"
+}

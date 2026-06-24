@@ -1,0 +1,11 @@
+{
+  "name": "__test_fixture_campaign__",
+  "suite": "Fixture Suite v1",
+  "case_selector_json": {},
+  "eligible_competitors": [
+    { "slug": "fixture-alpha", "version": 1 },
+    { "slug": "fixture-beta", "version": 1 }
+  ],
+  "replicates": 1,
+  "matchmaking_strategy": "coverage"
+}

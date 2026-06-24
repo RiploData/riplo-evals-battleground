@@ -1,0 +1,15 @@
+{
+  "name": "Fixture Suite v1",
+  "purpose": "Test suite for integration testing of importConfig",
+  "intended_reader": "Test harness",
+  "rubric_json": {
+    "dimensions": [
+      { "id": "accuracy", "label": "Accuracy", "weight": 0.5 },
+      { "id": "clarity", "label": "Clarity", "weight": 0.5 }
+    ]
+  },
+  "weighting_json": {
+    "judgment": 1.0,
+    "compression": 1.0
+  }
+}

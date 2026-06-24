@@ -1,0 +1,16 @@
+{
+  "name": "Riplo Consulting v1",
+  "purpose": "Evaluate consulting AI assistants on strategic reasoning, market sizing, and investment judgment tasks drawn from real PE/VC diligence scenarios.",
+  "intended_reader": "Investment professionals and strategy consultants",
+  "rubric_json": {
+    "dimensions": [
+      { "id": "accuracy", "label": "Factual accuracy", "weight": 0.3 },
+      { "id": "insight", "label": "Insight and depth", "weight": 0.4 },
+      { "id": "concision", "label": "Concision and clarity", "weight": 0.3 }
+    ]
+  },
+  "weighting_json": {
+    "judgment": 1.0,
+    "compression": 1.0
+  }
+}

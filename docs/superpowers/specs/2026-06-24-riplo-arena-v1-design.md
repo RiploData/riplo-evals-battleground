@@ -38,6 +38,8 @@ Everything immutable and append-only; rankings rebuild from source.
 | Generation | **Live, multi-provider via OpenRouter** (one key) | `model_identifier` routes Anthropic/OpenAI. Lazy synchronous, written through the `generation_attempts` queued-row contract. |
 | Ranking | **TypeScript** Bradley–Terry + bootstrap CIs | Single toolchain; still strictly derived from `judgments`. Deliberate divergence from the pack's Python suggestion. |
 | Case corpus | **Git-authored + idempotent importer** (not an admin authoring UI) | `05` recommendation: version control, PR review, diffable synthetic-data provenance. |
+| Competitor setups | **Config-as-code, git-authored + idempotent importer** (not hand-inserted into the DB) | Same provenance/immutability/PR-review benefits for execution contracts; editing a prompt = a diffable file change → new immutable `competitor_version`. |
+| Suite + default campaign | **Config files, ingested on seed** | One default suite + campaign defined in `config/`; keeps "ratings never silently compared across suite versions" auditable in git. |
 | Sensitivity | Column retained, **no gating logic** | Per user: author crisp/clear synthetic cases instead. |
 | Scope | **Full v1 loop** | Per user. |
 | Testing | Vitest (unit + integration) + Playwright (e2e loop) | Pure-domain logic unit-tested; loop verified end to end. |
@@ -67,8 +69,8 @@ src/
       run.ts           # orchestrate scores: ranks, rank ranges, tie/unacceptable rates
   services/            # DB-touching use cases (transactions live here)
     cases.ts           # read/list case_versions (authoring is the importer)
-    competitors.ts     # competitors + immutable competitor_versions (edit => new version)
-    campaigns.ts       # default campaign config
+    competitors.ts     # read/list competitors + competitor_versions (setup is the importer)
+    campaigns.ts       # read default campaign (defined in config/, ingested on seed)
     generation/
       runner.ts        # execute(case_version, competitor_version, replicate): attempt -> response
       providers/openrouter.ts
@@ -86,8 +88,10 @@ src/
     api/               # battle, vote, cases, competitors, generate, ranking-runs,
                        #   leaderboard, reports/*, export, uploads
   ui/                  # design tokens (from mockup) + shared components
-cases/                 # GIT-AUTHORED CORPUS (see §6)
-scripts/               # cases:validate, cases:import, cases:smoke, db:seed-competitors
+cases/                 # GIT-AUTHORED CASE CORPUS (see §6)
+competitors/           # GIT-AUTHORED COMPETITOR SETUPS (config-as-code, see §6)
+config/                # default suite + campaign definitions (ingested on seed, see §6)
+scripts/               # validate, import (cases+competitors+config), smoke, seed (runs all)
 tests/
   domain/              # unit (pure)
   integration/         # api + real pg (docker)
@@ -126,7 +130,11 @@ For each unit we can answer: **what it does, how you use it, what it depends on.
 
 ---
 
-## 6. Git-authored case corpus + importer (`05`)
+## 6. Git-authored corpus + importer — cases, competitors, config (`05`)
+
+Everything that defines *what gets evaluated and how* is config-as-code in git, ingested by idempotent, content-addressed importers. The DB remains the source of truth for **runtime and ratings**; git is the source of truth for **authoring**. One command — `npm run seed` — runs all importers in dependency order (suite → competitors → cases → campaign).
+
+### 6a. Case corpus
 
 **Authoring tree** (path-encoded taxonomy; `domain`+`kind` → tags + `case_versions.kind`):
 
@@ -150,7 +158,34 @@ cases/<domain>/<kind>/<case>/[<scenario>/]case.json
 
 A GitHub Actions workflow runs schema+integrity on PRs (no key needed). Smoke is opt-in.
 
-**First-pass content:** hand-author a representative handful of Stream-A synthetic cases (2 domains × 2–3 kinds, all `dataset_split=dev`) so the loop is real after `cases:import`. Validation/holdout cases are held out of routine battling.
+**First-pass content:** hand-author a representative handful of Stream-A synthetic cases (2 domains × 2–3 kinds, all `dataset_split=dev`) so the loop is real after import. Validation/holdout cases are held out of routine battling.
+
+### 6b. Competitor setups (config-as-code)
+
+**Authoring tree:**
+
+```
+competitors/<competitor-slug>/
+  competitor.json          # logical: { name, competitor_type }
+  versions/
+    v1.json                # the execution contract (see below)
+    v2.json                # an edit is a NEW file, not a mutation
+  prompts/                 # optional: prompt bodies referenced by versions, for readability/diffs
+    concise-system.md
+```
+
+A **version file** is the authoring form of a `competitor_version`: `model_provider`, `model_identifier` (the OpenRouter route), `prompt_bundle` (system prompt + skill refs; may inline `system_prompt` or reference `prompts/*.md` via `system_prompt_ref`), `model_parameters` (temperature, top_p, max_tokens…), `source_type`, and optional `parent` (`{slug, version}`) for lineage. A **Zod** schema defines it once, reused by validate/import/CI.
+
+**Importer** (idempotent + content-addressed, mirrors the case importer):
+- Upsert the logical `competitors` row by slug.
+- For each version file, compute `content_hash` over the canonicalised execution contract (with referenced prompt bodies resolved). A `competitor_version` with that hash already present → **no-op**. New hash → insert a **new immutable version** with the next `version` number and a resolved `parent_competitor_version_id`. Existing versions are **never edited** (invariant #4).
+- Validation gate: schema conformance + referenced prompt files resolve + parent (if any) exists.
+
+This is the *only* supported path to register competitors in v1; the admin UI reads them.
+
+### 6c. Suite + default campaign
+
+`config/suites/<suite>.json` defines a suite + its `suite_version` (`rubric_json`, `weighting_json`); `config/campaign.json` defines the single default campaign (suite version ref, case selector, eligible competitor versions, `replicates=1`, `matchmaking_strategy=coverage`). Cases declare their suite (via path or `case.json`). Ingested on seed; the campaign always records its suite version so ratings are never silently compared across suite versions (invariant #8).
 
 ---
 
@@ -195,18 +230,17 @@ A single number is never the only view.
 
 **Rater view** — faithful port of `arena-rater-view.jsx` (tokens preserved), keyboard-first (`A`/`B`/`T`/`R`→`A`/`B`/`S`), wired to live `GET /battle` + `POST /vote`. "Blinded · randomised" marker; session counter; output length never shown.
 
-**Admin** — minimal but complete: competitor + immutable version management (edit → new version), default campaign config, "generate" trigger + status, "run ranking" button, leaderboard + the three report views, judgment export, and a **read-only case browser** (authoring is git). Reason tags are a v1.1 post-choice multi-select — schema-ready, not built now.
+**Admin** — minimal but complete: a "generate" trigger + status, a "run ranking" button, leaderboard + the three report views, judgment export, and **read-only browsers** for cases, competitor versions (showing the execution contract + lineage), and the default campaign (authoring for all three is git/config). Reason tags are a v1.1 post-choice multi-select — schema-ready, not built now.
 
 ---
 
 ## 11. Local dev experience
 
 ```
-cp .env.example .env        # DATABASE_URL, WORKOS_* + ALLOWED_ORG_ID, OPENROUTER_API_KEY
-docker compose up -d        # postgres
+cp .env.example .env   # DATABASE_URL, WORKOS_* + ALLOWED_ORG_ID, OPENROUTER_API_KEY
+docker compose up -d   # postgres
 npm run db:migrate
-npm run cases:import        # git corpus -> case_versions
-npm run db:seed-competitors # a couple of immutable competitor versions + default campaign
+npm run seed           # ingests config/ (suite + campaign), competitors/, cases/ -> DB (idempotent)
 npm run dev
 ```
 
@@ -246,8 +280,8 @@ After this spec → an implementation plan (writing-plans) → parallel agents i
   - (b) `auth/*` — WorkOS AuthKit + org allowlist + rbac.
   - (c) `generation/*` — OpenRouter runner + provider.
   - (d) battle + vote services & API (hot path).
-  - (e) admin services & API — competitors, campaign, generate, ranking, reports, export.
-  - (f) case corpus: Zod schema + importer + validation/smoke scripts + CI + first cases.
+  - (e) admin services & API — generate, ranking, reports, export, + read-only cases/competitors/campaign.
+  - (f) git corpus: Zod schemas + importers (cases, competitors, suite/campaign config) + validation/smoke scripts + CI + first authored cases & competitor setups + `npm run seed`.
   - (g) rater UI (port mockup, wire live).
   - (h) admin UI (competitors, campaign, generate, leaderboard, reports, case browser).
 - **Wave 2 (integration):** wire, run integration + e2e, fix seams, deliver a running app + a short deploy-config checklist.
@@ -258,4 +292,4 @@ Dependency spine: Wave 0 → (a)(b)(c)(f) independent; (d) needs (a)+schema; (e)
 
 ## 15. Out of scope (v1)
 
-Async generation workers (SQS/Bedrock); replicates > 1 by default; independent human-baseline authoring (`POST /baseline`); diagnostic reason tags; adaptive matchmaking; balanced side-placement scheduling; the manual DS optimisation-run workflow; automated graders; per-rater weighting; multi-org RBAC; in-app case authoring UI; image/chart source blocks; the curation-loop analytics (`05` Phase 2). Schema columns for these are present (cheap now, costly to retrofit); the behaviour is deferred.
+Async generation workers (SQS/Bedrock); replicates > 1 by default; independent human-baseline authoring (`POST /baseline`); diagnostic reason tags; adaptive matchmaking; balanced side-placement scheduling; the manual DS optimisation-run workflow; automated graders; per-rater weighting; multi-org RBAC; in-app case/competitor authoring UI (authoring is git/config); image/chart source blocks; the curation-loop analytics (`05` Phase 2). Schema columns for these are present (cheap now, costly to retrofit); the behaviour is deferred.

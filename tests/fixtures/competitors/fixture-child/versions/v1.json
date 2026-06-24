@@ -1,0 +1,16 @@
+{
+  "model_provider": "anthropic",
+  "model_identifier": "anthropic/claude-opus-4-8",
+  "prompt_bundle": {
+    "system_prompt": "You are a test fixture child, derived from alpha."
+  },
+  "model_parameters": {
+    "temperature": 0.3,
+    "max_tokens": 256
+  },
+  "source_type": "manual",
+  "parent": {
+    "slug": "fixture-alpha",
+    "version": 1
+  }
+}

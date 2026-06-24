@@ -1,0 +1,12 @@
+{
+  "model_provider": "anthropic",
+  "model_identifier": "anthropic/claude-opus-4-8",
+  "prompt_bundle": {
+    "system_prompt_ref": "system.md"
+  },
+  "model_parameters": {
+    "temperature": 0.5,
+    "max_tokens": 512
+  },
+  "source_type": "manual"
+}

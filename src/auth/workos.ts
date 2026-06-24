@@ -1,4 +1,3 @@
-import { withAuth } from '@workos-inc/authkit-nextjs';
 import { sql } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { users } from '@/db/schema';
@@ -79,6 +78,9 @@ export async function requireUser(): Promise<SessionUser> {
     });
   }
 
+  // Dynamic import so authkit's import-time WorkOS construction never runs on the
+  // dev-auth path above (no WorkOS keys needed locally). vi.mock intercepts this too.
+  const { withAuth } = await import('@workos-inc/authkit-nextjs');
   const session = await withAuth({ ensureSignedIn: true });
 
   if (!session.user) {

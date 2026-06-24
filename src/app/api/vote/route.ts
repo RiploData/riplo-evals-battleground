@@ -29,7 +29,7 @@ export async function POST(request: Request) {
 
   try {
     const result = await submitVote(user, req);
-    return NextResponse.json(result, { status: 200 });
+    return NextResponse.json(result, { status: 201 });
   } catch (err) {
     if (err instanceof VoteError) {
       const body: ApiError = { error: { code: err.code, message: err.message } };

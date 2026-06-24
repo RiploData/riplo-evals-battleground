@@ -14,7 +14,7 @@ import {
   responses,
 } from '@/db/schema';
 import { enqueueGeneration, generationStatus } from '@/services/generate-batch';
-import type { GenerationProvider, ProviderResult } from '@/services/generation/providers/openrouter';
+import type { GenerationProvider, ProviderResult } from '@/services/generation/provider';
 import type { SessionUser } from '@/auth/workos';
 
 // ---- Fake provider ----

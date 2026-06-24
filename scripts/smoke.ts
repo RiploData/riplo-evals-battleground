@@ -6,7 +6,7 @@
  *
  * Requires:
  *   - DATABASE_URL (Postgres)
- *   - OPENROUTER_API_KEY (if unset, skips gracefully with exit 0)
+ *   - ANTHROPIC_API_KEY or OPENAI_API_KEY (if unset, skips gracefully with exit 0)
  *
  * Usage: npx tsx scripts/smoke.ts
  */
@@ -31,9 +31,9 @@ async function main(): Promise<void> {
   console.log('=== Riplo Arena: Smoke Test ===');
 
   // Check for required API key
-  if (!process.env.OPENROUTER_API_KEY) {
-    console.log('SKIP: OPENROUTER_API_KEY is not set. Smoke test requires a live API key.');
-    console.log('      Set OPENROUTER_API_KEY and re-run to execute live generation.');
+  if (!process.env.ANTHROPIC_API_KEY && !process.env.OPENAI_API_KEY) {
+    console.log('SKIP: Neither ANTHROPIC_API_KEY nor OPENAI_API_KEY is set. Smoke test requires a live API key.');
+    console.log('      Set ANTHROPIC_API_KEY or OPENAI_API_KEY and re-run to execute live generation.');
     process.exit(0);
   }
 

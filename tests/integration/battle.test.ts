@@ -18,7 +18,7 @@ import {
 } from '@/db/schema';
 import { getNextBattle } from '@/services/battle';
 import type { SessionUser } from '@/auth/workos';
-import type { GenerationProvider, ProviderResult } from '@/services/generation/providers/openrouter';
+import type { GenerationProvider, ProviderResult } from '@/services/generation/provider';
 
 // ---------------------------------------------------------------------------
 // Fake provider — no network calls

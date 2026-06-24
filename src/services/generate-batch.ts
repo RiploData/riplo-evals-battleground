@@ -3,8 +3,7 @@ import { db } from '@/db/client';
 import { generationAttempts, responses } from '@/db/schema';
 import { ensureResponse } from '@/services/generation/runner';
 import type { SessionUser } from '@/auth/workos';
-import type { GenerationProvider } from '@/services/generation/providers/openrouter';
-import { openRouterProvider } from '@/services/generation/providers/openrouter';
+import type { GenerationProvider } from '@/services/generation/provider';
 
 export interface EnqueueBody {
   campaignId: string;
@@ -28,7 +27,7 @@ export interface EnqueueResult {
 export async function enqueueGeneration(
   _user: SessionUser,
   body: EnqueueBody,
-  provider: GenerationProvider = openRouterProvider,
+  provider?: GenerationProvider,
 ): Promise<EnqueueResult> {
   const { campaignId, caseVersionIds, competitorVersionIds, replicates = 1 } = body;
 

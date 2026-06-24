@@ -2,10 +2,17 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { GenerationProvider, ProviderRequest, ProviderResult } from '../provider';
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+let _client: Anthropic | undefined;
+function getClient(): Anthropic {
+  if (!_client) {
+    _client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  }
+  return _client;
+}
 
 export const anthropicProvider: GenerationProvider = {
   async execute(req: ProviderRequest): Promise<ProviderResult> {
+    const client = getClient();
     const maxTokens = (req.params.max_tokens as number) ?? 4096;
 
     // Build optional thinking block — ONLY pass if present in params.

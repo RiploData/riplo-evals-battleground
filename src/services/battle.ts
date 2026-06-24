@@ -14,7 +14,7 @@ import { ensureResponse } from '@/services/generation/runner';
 import { toBlindedOptions } from '@/domain/blinding';
 import type { SessionUser } from '@/auth/workos';
 import type { BattlePayload, BattleTask, OutputSpec, SourceBlock } from '@/types/contracts';
-import type { GenerationProvider } from '@/services/generation/providers/openrouter';
+import type { GenerationProvider } from '@/services/generation/provider';
 
 export interface GetNextBattleOpts {
   provider?: GenerationProvider;

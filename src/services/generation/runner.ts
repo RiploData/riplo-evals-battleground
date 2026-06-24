@@ -99,11 +99,11 @@ export async function ensureResponse(
     throw new Error(`Competitor version ${competitorVersionId} has no model_identifier`);
   }
 
-  if (!competitorVersion.modelProvider) {
-    throw new Error(`Competitor version ${competitorVersionId} has no model_provider`);
-  }
-
-  const activeProvider = provider ?? providerFor(competitorVersion.modelProvider);
+  const activeProvider =
+    provider ??
+    (competitorVersion.modelProvider
+      ? providerFor(competitorVersion.modelProvider)
+      : (() => { throw new Error(`Competitor version ${competitorVersionId} has no model_provider`); })());
 
   const modelIdentifier = competitorVersion.modelIdentifier;
   const runnerInput = (caseVersion.runnerInputJson ?? {}) as Record<string, unknown>;

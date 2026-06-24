@@ -12,7 +12,7 @@ import {
   responses,
 } from '@/db/schema';
 import { ensureResponse } from '@/services/generation/runner';
-import type { GenerationProvider, ProviderResult } from '@/services/generation/providers/openrouter';
+import type { GenerationProvider, ProviderResult } from '@/services/generation/provider';
 
 // ---- Fake providers ----
 

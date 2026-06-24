@@ -3,14 +3,14 @@ import { eq, and } from 'drizzle-orm';
 import { db, pool } from '@/db/client';
 import { campaigns, caseVersions, responses } from '@/db/schema';
 import { ensureResponse } from '@/services/generation/runner';
-import type { GenerationProvider, ProviderResult } from '@/services/generation/providers/openrouter';
+import type { GenerationProvider, ProviderResult } from '@/services/generation/provider';
 
 /**
  * DEV / DEMO ONLY — generates placeholder responses for every (case × competitor)
  * cell of the default campaign using a deterministic FAKE provider, so the battle
- * loop is clickable locally WITHOUT an OPENROUTER_API_KEY.
+ * loop is clickable locally WITHOUT an ANTHROPIC_API_KEY or OPENAI_API_KEY.
  *
- * The real app generates live responses via OpenRouter on demand whenever a key is
+ * The real app generates live responses via configured providers on demand whenever a key is
  * configured; this script does not touch that path. Run it only to demo/e2e locally.
  *
  *   npx tsx scripts/seed-dev-responses.ts
@@ -26,7 +26,7 @@ function fakeProvider(): GenerationProvider {
       const text =
         `[${flavour}] ${req.user.slice(0, 80)}\n\n` +
         `This is a placeholder response #${n} for local demo. ` +
-        `It stands in for a live model output until OPENROUTER_API_KEY is set.`;
+        `It stands in for a live model output until ANTHROPIC_API_KEY or OPENAI_API_KEY is set.`;
       return {
         text,
         inputTokens: 100,

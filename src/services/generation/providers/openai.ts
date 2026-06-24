@@ -2,10 +2,17 @@
 import OpenAI from 'openai';
 import type { GenerationProvider, ProviderRequest, ProviderResult } from '../provider';
 
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+let _client: OpenAI | undefined;
+function getClient(): OpenAI {
+  if (!_client) {
+    _client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  }
+  return _client;
+}
 
 export const openAIProvider: GenerationProvider = {
   async execute(req: ProviderRequest): Promise<ProviderResult> {
+    const client = getClient();
     // Newer OpenAI models (gpt-5, o-series) use max_completion_tokens.
     // Accept either param name from req.params for flexibility.
     const maxCompletionTokens =

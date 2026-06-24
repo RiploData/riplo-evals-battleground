@@ -1,6 +1,6 @@
 {
   "model_provider": "openai",
-  "model_identifier": "gpt-5",
+  "model_identifier": "gpt-5.5",
   "prompt_bundle": {
     "system_prompt_ref": "system.md"
   },

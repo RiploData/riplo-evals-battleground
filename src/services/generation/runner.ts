@@ -10,22 +10,60 @@ import { contentHash } from '@/domain/content-hash';
 import type { GenerationProvider, ProviderRequest } from './provider';
 import { providerFor } from './providers';
 
+/** Render typed source blocks (text/bullets) into a plain-text block for the prompt. */
+function renderSourceBlocks(blocks: unknown): string {
+  if (!Array.isArray(blocks)) return '';
+  return blocks
+    .map((b) => {
+      const block = b as Record<string, unknown>;
+      if (block.type === 'bullets' && Array.isArray(block.items)) {
+        return block.items.map((it) => `- ${String(it)}`).join('\n');
+      }
+      if (typeof block.text === 'string') return block.text;
+      return '';
+    })
+    .filter(Boolean)
+    .join('\n\n');
+}
+
 /**
- * Renders a ProviderRequest from the case version's runner_input_json and
- * the competitor version's prompt_bundle_json / model_parameters_json.
+ * Renders a ProviderRequest from the case version (runner_input_json +
+ * source_blocks_json) and the competitor version (prompt_bundle_json /
+ * model_parameters_json).
  *
- * runner_input_json is expected to contain at least { user: string }.
- * prompt_bundle_json is expected to contain at least { system: string }.
- * model_parameters_json is passed through as params.
+ * - system  ← prompt_bundle.system_prompt (the importer resolves system_prompt_ref
+ *   into system_prompt); falls back to `system` for legacy/fixture shapes.
+ * - user    ← assembled from runner_input.instruction + runner_input.constraints +
+ *   the rendered source material. A direct runner_input.user string overrides.
+ * - params  ← model_parameters_json, passed through.
  */
 function renderRequest(
   runnerInput: Record<string, unknown>,
+  sourceBlocks: unknown,
   promptBundle: Record<string, unknown>,
   modelParams: Record<string, unknown>,
   modelIdentifier: string,
 ): ProviderRequest {
-  const system = (promptBundle['system'] as string | undefined) ?? '';
-  const user = (runnerInput['user'] as string | undefined) ?? '';
+  const system =
+    (promptBundle['system_prompt'] as string | undefined) ??
+    (promptBundle['system'] as string | undefined) ??
+    '';
+
+  let user: string;
+  const directUser = runnerInput['user'];
+  if (typeof directUser === 'string' && directUser.trim()) {
+    user = directUser;
+  } else {
+    const parts: string[] = [];
+    if (typeof runnerInput['instruction'] === 'string') parts.push(runnerInput['instruction']);
+    if (typeof runnerInput['constraints'] === 'string') {
+      parts.push(`Constraints:\n${runnerInput['constraints']}`);
+    }
+    const source = renderSourceBlocks(sourceBlocks);
+    if (source) parts.push(`Source material:\n${source}`);
+    user = parts.join('\n\n');
+  }
+
   return {
     model: modelIdentifier,
     system,
@@ -71,6 +109,7 @@ export async function ensureResponse(
   const [caseVersion] = await db
     .select({
       runnerInputJson: caseVersions.runnerInputJson,
+      sourceBlocksJson: caseVersions.sourceBlocksJson,
     })
     .from(caseVersions)
     .where(eq(caseVersions.id, caseVersionId))
@@ -110,7 +149,19 @@ export async function ensureResponse(
   const promptBundle = (competitorVersion.promptBundleJson ?? {}) as Record<string, unknown>;
   const modelParams = (competitorVersion.modelParametersJson ?? {}) as Record<string, unknown>;
 
-  const request = renderRequest(runnerInput, promptBundle, modelParams, modelIdentifier);
+  const request = renderRequest(
+    runnerInput,
+    caseVersion.sourceBlocksJson,
+    promptBundle,
+    modelParams,
+    modelIdentifier,
+  );
+
+  if (!request.user.trim()) {
+    throw new Error(
+      `Empty rendered prompt for case ${caseVersionId} — check runner_input_json/source_blocks_json`,
+    );
+  }
 
   // --- Insert attempt (queued) ---
   const [attempt] = await db

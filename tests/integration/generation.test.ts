@@ -12,7 +12,11 @@ import {
   responses,
 } from '@/db/schema';
 import { ensureResponse } from '@/services/generation/runner';
-import type { GenerationProvider, ProviderResult } from '@/services/generation/provider';
+import type {
+  GenerationProvider,
+  ProviderRequest,
+  ProviderResult,
+} from '@/services/generation/provider';
 
 // ---- Fake providers ----
 
@@ -29,6 +33,20 @@ const fakeProvider: GenerationProvider = {
     };
   },
 };
+
+// Captures the ProviderRequest the runner assembles, so we can assert the prompt.
+function makeCapturingProvider(): { provider: GenerationProvider; last: () => ProviderRequest | undefined } {
+  let captured: ProviderRequest | undefined;
+  return {
+    provider: {
+      async execute(req): Promise<ProviderResult> {
+        captured = req;
+        return { text: 'ok', inputTokens: 1, outputTokens: 1, finishReason: 'stop', raw: {} };
+      },
+    },
+    last: () => captured,
+  };
+}
 
 function makeFailingProvider(message: string): GenerationProvider {
   return {
@@ -143,9 +161,93 @@ async function seedCompetitorVersion(suffix: string) {
   return cv.id;
 }
 
+// Seeds a case + competitor in the REAL corpus shape: runner_input has
+// instruction/constraints (no `user`), source lives in source_blocks_json, and
+// the competitor's prompt_bundle uses `system_prompt`.
+async function seedRealShapeCell(suffix: string) {
+  const [suite] = await db
+    .insert(suites)
+    .values({ name: `Real Suite ${suffix}` })
+    .returning({ id: suites.id });
+  createdSuiteIds.push(suite.id);
+  const [c] = await db.insert(cases).values({ suiteId: suite.id }).returning({ id: cases.id });
+  createdCaseIds.push(c.id);
+  const [cv] = await db
+    .insert(caseVersions)
+    .values({
+      caseId: c.id,
+      version: 1,
+      kind: 'compression',
+      title: `Real Case ${suffix}`,
+      outputSpecJson: {},
+      runnerInputJson: {
+        instruction: 'Compress the memo to its decision-relevant core.',
+        constraints: 'Max 100 words.',
+      },
+      sourceBlocksJson: [
+        { type: 'text', text: 'ACME Corp ARR is £14m growing 31% YoY.' },
+        { type: 'bullets', items: ['Retention 91% gross', 'Founder-CTO key-person risk'] },
+      ],
+      evaluatorContextJson: {},
+      contentHash: `case-hash-real-${suffix}`,
+    })
+    .returning({ id: caseVersions.id });
+  createdCaseVersionIds.push(cv.id);
+
+  const [comp] = await db
+    .insert(competitors)
+    .values({ name: `Real Competitor ${suffix}`, competitorType: 'model_runner' })
+    .returning({ id: competitors.id });
+  createdCompetitorIds.push(comp.id);
+  const [compv] = await db
+    .insert(competitorVersions)
+    .values({
+      competitorId: comp.id,
+      version: 1,
+      modelIdentifier: 'fake/model',
+      promptBundleJson: { system_prompt: 'You are a sharp consultant.' },
+      modelParametersJson: { max_tokens: 256 },
+      contentHash: `comp-hash-real-${suffix}`,
+    })
+    .returning({ id: competitorVersions.id });
+  createdCompetitorVersionIds.push(compv.id);
+
+  return { caseVersionId: cv.id, competitorVersionId: compv.id };
+}
+
 // ---- Tests ----
 
 describe('generation runner integration', () => {
+  it('assembles a non-empty prompt from real corpus shape (instruction/constraints/source_blocks + system_prompt)', async () => {
+    const { caseVersionId, competitorVersionId } = await seedRealShapeCell('shape-04');
+    const cap = makeCapturingProvider();
+
+    const { responseId } = await ensureResponse(
+      caseVersionId,
+      competitorVersionId,
+      0,
+      undefined,
+      cap.provider,
+    );
+    createdResponseIds.push(responseId);
+    const attempts = await db
+      .select()
+      .from(generationAttempts)
+      .where(eq(generationAttempts.caseVersionId, caseVersionId));
+    for (const a of attempts) createdAttemptIds.push(a.id);
+
+    const req = cap.last();
+    expect(req).toBeDefined();
+    // system comes from prompt_bundle.system_prompt
+    expect(req!.system).toContain('sharp consultant');
+    // user assembled from instruction + constraints + source material (text + bullets)
+    expect(req!.user).toContain('Compress the memo'); // instruction
+    expect(req!.user).toContain('Max 100 words'); // constraints
+    expect(req!.user).toContain('ACME Corp ARR'); // source text block
+    expect(req!.user).toContain('Founder-CTO key-person risk'); // source bullet
+    expect(req!.user.trim().length).toBeGreaterThan(50);
+  });
+
   it('writes exactly one attempt and one response on success', async () => {
     const caseVersionId = await seedCaseVersion('success-01');
     const competitorVersionId = await seedCompetitorVersion('success-01');

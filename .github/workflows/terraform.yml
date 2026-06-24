@@ -11,6 +11,7 @@ on:
     paths:
       - 'infra/terraform/**'
       - '.github/workflows/terraform.yml'
+  workflow_dispatch: {}
 
 permissions:
   id-token: write # GitHub OIDC → AWS
@@ -55,5 +56,5 @@ jobs:
         run: terraform plan -input=false -no-color
 
       - name: Apply
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         run: terraform apply -input=false -auto-approve -no-color

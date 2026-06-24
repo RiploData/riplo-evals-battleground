@@ -7,11 +7,8 @@ import {
   competitorVersions,
 } from '@/db/schema';
 import { contentHash } from '@/domain/content-hash';
-import {
-  openRouterProvider,
-  type GenerationProvider,
-  type ProviderRequest,
-} from './providers/openrouter';
+import type { GenerationProvider, ProviderRequest } from './provider';
+import { providerFor } from './providers';
 
 /**
  * Renders a ProviderRequest from the case version's runner_input_json and
@@ -50,7 +47,7 @@ export async function ensureResponse(
   competitorVersionId: string,
   replicateIndex: number = 0,
   campaignId?: string,
-  provider: GenerationProvider = openRouterProvider,
+  provider?: GenerationProvider,
 ): Promise<{ responseId: string }> {
   // --- Cache check ---
   const existing = await db
@@ -86,6 +83,7 @@ export async function ensureResponse(
   const [competitorVersion] = await db
     .select({
       modelIdentifier: competitorVersions.modelIdentifier,
+      modelProvider: competitorVersions.modelProvider,
       promptBundleJson: competitorVersions.promptBundleJson,
       modelParametersJson: competitorVersions.modelParametersJson,
     })
@@ -100,6 +98,12 @@ export async function ensureResponse(
   if (!competitorVersion.modelIdentifier) {
     throw new Error(`Competitor version ${competitorVersionId} has no model_identifier`);
   }
+
+  if (!competitorVersion.modelProvider) {
+    throw new Error(`Competitor version ${competitorVersionId} has no model_provider`);
+  }
+
+  const activeProvider = provider ?? providerFor(competitorVersion.modelProvider);
 
   const modelIdentifier = competitorVersion.modelIdentifier;
   const runnerInput = (caseVersion.runnerInputJson ?? {}) as Record<string, unknown>;
@@ -133,7 +137,7 @@ export async function ensureResponse(
   const startedAt = Date.now();
   let result;
   try {
-    result = await provider.execute(request);
+    result = await activeProvider.execute(request);
   } catch (err: unknown) {
     const latencyMs = Date.now() - startedAt;
     const errorCode =

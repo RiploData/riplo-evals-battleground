@@ -187,25 +187,54 @@ describe('selectPair — tag balancing', () => {
   });
 
   it('considers tag coverage when weighting under-covered tags', () => {
-    // Two cases: c1 tagged ['math'], c2 tagged ['writing']
-    // existingPairCounts are equal for both but we still get a valid result
+    // Scenario: c_math_a (over-covered tag) and c_writing (under-covered tag) are in the
+    // SAME lowest count-tier (both at count=0). We use a deterministic rng returning 0.03
+    // to pinpoint the weighted-selection branch that tag weighting controls.
+    //
+    // Tag coverage (via c_math_b which shares 'math' with c_math_a):
+    //   tagCoverageMap['math']    = c_math_a(0) + c_math_b(50) = 50
+    //   tagCoverageMap['writing'] = c_writing(0)               =  0
+    //   maxTagCoverage = 50
+    //
+    // Case weights (higher = more likely selected):
+    //   caseTagWeight(c_math_a)  = 50 - 50 = 0 → clamped to 1
+    //   caseTagWeight(c_writing) = 50 -  0 = 50
+    //
+    // Cases are ordered [c_math_a, c_writing] in the input, so the weighted selection loop:
+    //   totalWeight = 1 + 50 = 51
+    //   pick = rng() * 51 = 0.03 * 51 = 1.53
+    //   subtract c_math_a weight (1): pick = 0.53  → still > 0
+    //   subtract c_writing weight (50): pick = -49.47 → ≤ 0  →  c_writing SELECTED ✓
+    //
+    // Without tag weighting (all weights = 1):
+    //   totalWeight = 2
+    //   pick = 0.03 * 2 = 0.06
+    //   subtract c_math_a weight (1): pick = -0.94 → ≤ 0  →  c_math_a SELECTED (wrong!)
+    //
+    // So this rng value of 0.03 deterministically distinguishes the two regimes.
+    const existingPairCounts: Record<string, number> = {
+      [pairKey('c_math_b', 'x', 'y')]: 50,  // inflates 'math' tag coverage
+    };
+
     const input: MatchmakingInput = {
       cases: [
-        { caseVersionId: 'c1', tags: ['math'] },
-        { caseVersionId: 'c2', tags: ['writing'] },
+        { caseVersionId: 'c_math_a', tags: ['math'] },      // over-covered, listed first
+        { caseVersionId: 'c_writing', tags: ['writing'] },  // under-covered, listed second
+        { caseVersionId: 'c_math_b', tags: ['math'] },      // coverage booster, seenByUser
       ],
       eligibleCompetitorVersionIds: ['x', 'y'],
-      existingPairCounts: {
-        [pairKey('c1', 'x', 'y')]: 5,
-        [pairKey('c2', 'x', 'y')]: 5,
-      },
-      seenByUser: new Set(),
-      rng: makeSeededRng(42),
+      existingPairCounts,
+      seenByUser: new Set([pairKey('c_math_b', 'x', 'y')]),
+      rng: () => 0.03,  // deterministic: selects c_writing under weighting, c_math_a without
     };
+
     const result = selectPair(input);
     expect(result).not.toBeNull();
     if (result === null) return;
-    expect(['c1', 'c2']).toContain(result.caseVersionId);
+
+    // Must select the UNDER-covered case, not the over-covered one.
+    // If tag weighting is removed, c_math_a (listed first) would be selected instead.
+    expect(result.caseVersionId).toBe('c_writing');
   });
 });
 

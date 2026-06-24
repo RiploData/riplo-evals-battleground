@@ -3,6 +3,9 @@ import { requireUser } from '@/auth/workos';
 import { getNextBattle } from '@/services/battle';
 import type { ApiError } from '@/types/contracts';
 
+// Lazily generates missing responses via the model provider, which can be slow.
+export const maxDuration = 60;
+
 export async function GET(): Promise<NextResponse> {
   let user;
   try {

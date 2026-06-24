@@ -4,9 +4,10 @@ import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { Pool } from 'pg';
 import path from 'path';
 import fs from 'fs';
+import { sslOption } from './ssl';
 
 async function main() {
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: sslOption() });
   const db = drizzle(pool);
 
   console.log('Running drizzle migrations…');

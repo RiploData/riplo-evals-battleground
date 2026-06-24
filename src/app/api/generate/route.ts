@@ -3,6 +3,9 @@ import { requireUser, requireRole, UnauthorizedError, ForbiddenError } from '@/a
 import { enqueueGeneration } from '@/services/generate-batch';
 import type { ApiError } from '@/types/contracts';
 
+// Synchronously generates responses for a matrix of cells; can run long.
+export const maxDuration = 60;
+
 export async function POST(req: NextRequest): Promise<NextResponse> {
   let user;
   try {

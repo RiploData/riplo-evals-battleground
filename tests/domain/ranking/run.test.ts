@@ -70,6 +70,36 @@ describe('computeRanking', () => {
     expect(aWith.rank).toBe(aWithout.rank);
   });
 
+  it('both_unacceptable is numerically excluded from preference fit (near-tie scenario)', () => {
+    // Near-tie scenario: A and B are 1-1 in decisive outcomes; adding both_unacceptable
+    // judgments should NOT change scores at all, but WOULD change them if incorrectly
+    // treated as decisive wins/losses in the BT fit.
+    const baseJudgments: JudgmentForFit[] = [
+      makeJ('A', 'B', 'left', 'A', 'c1'),  // A wins
+      makeJ('A', 'B', 'right', 'B', 'c2'), // B wins
+    ];
+    const withUnacceptable: JudgmentForFit[] = [
+      ...baseJudgments,
+      makeJ('A', 'B', 'both_unacceptable', null, 'c3'),
+      makeJ('A', 'B', 'both_unacceptable', null, 'c4'),
+      makeJ('A', 'B', 'both_unacceptable', null, 'c5'),
+    ];
+
+    const r1 = computeRanking(baseJudgments, 42);
+    const r2 = computeRanking(withUnacceptable, 42);
+
+    const a1 = r1.find(r => r.competitorVersionId === 'A')!;
+    const a2 = r2.find(r => r.competitorVersionId === 'A')!;
+
+    // BT scores must be IDENTICAL — both_unacceptable did not enter the preference fit
+    expect(a2.rawScore).toBeCloseTo(a1.rawScore, 10);
+
+    // unacceptableRate for A: 3 unacceptable out of 5 total judgments = 0.6
+    expect(a2.unacceptableRate).toBeCloseTo(3 / 5, 5);
+    // Without both_unacceptable: 0 out of 2 = 0
+    expect(a1.unacceptableRate).toBeCloseTo(0, 10);
+  });
+
   it('cannot_assess judgments are ignored entirely', () => {
     const judgmentsClean: JudgmentForFit[] = [
       makeJ('A', 'B', 'left', 'A', 'c1'),

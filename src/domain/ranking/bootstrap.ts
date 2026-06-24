@@ -25,27 +25,41 @@ function mulberry32(seed: number): () => number {
   };
 }
 
+export interface BootstrapResult {
+  /** 2.5/97.5 percentile score intervals per competitor */
+  scoreIntervals: Record<string, { lo: number; hi: number }>;
+  /** 2.5/97.5 percentile rank intervals per competitor (1 = best) */
+  rankIntervals: Record<string, { lower: number; upper: number }>;
+}
+
 /**
- * Compute bootstrap confidence intervals for BT scores.
+ * Compute bootstrap confidence intervals for BT scores and ranks.
+ *
+ * For each bootstrap resample the BT model is refit, each competitor's rank
+ * within that resample is computed (dense ranking, 1 = highest score), and
+ * the per-competitor rank distribution is collected. Score and rank intervals
+ * are the 2.5/97.5 percentiles across all samples.
  *
  * @param competitorIds - All competitors
  * @param prefs - Pairwise preference records
  * @param seed - Seed for the mulberry32 PRNG (same seed → identical output)
  * @param samples - Number of bootstrap samples (default 200)
- * @returns Per-competitor { lo, hi } at 2.5/97.5 percentiles
+ * @returns Per-competitor score and rank intervals at 2.5/97.5 percentiles
  */
 export function bootstrapIntervals(
   competitorIds: string[],
   prefs: PrefRecord[],
   seed: number,
   samples = 200,
-): Record<string, { lo: number; hi: number }> {
+): BootstrapResult {
   const rng = mulberry32(seed);
 
-  // Collect per-competitor score distributions
-  const distributions: Record<string, number[]> = {};
+  // Collect per-competitor score and rank distributions
+  const scoreDistributions: Record<string, number[]> = {};
+  const rankDistributions: Record<string, number[]> = {};
   for (const id of competitorIds) {
-    distributions[id] = [];
+    scoreDistributions[id] = [];
+    rankDistributions[id] = [];
   }
 
   const n = prefs.length;
@@ -60,23 +74,51 @@ export function bootstrapIntervals(
 
     const result = fitBradleyTerry(competitorIds, resample);
 
+    // Compute ranks within this resample (dense ranking, 1 = highest)
+    const sorted = [...competitorIds].sort(
+      (a, b) => (result.scores[b] ?? 0) - (result.scores[a] ?? 0),
+    );
+    const sampleRanks: Record<string, number> = {};
+    let currentRank = 1;
+    for (let i = 0; i < sorted.length; i++) {
+      if (
+        i > 0 &&
+        Math.abs(
+          (result.scores[sorted[i]] ?? 0) - (result.scores[sorted[i - 1]] ?? 0),
+        ) > 1e-12
+      ) {
+        currentRank = i + 1;
+      }
+      sampleRanks[sorted[i]] = currentRank;
+    }
+
     for (const id of competitorIds) {
-      // Use 0 as fallback for competitors that may have 0 wins in this resample
-      distributions[id].push(result.scores[id] ?? 0);
+      scoreDistributions[id].push(result.scores[id] ?? 0);
+      rankDistributions[id].push(sampleRanks[id] ?? competitorIds.length);
     }
   }
 
   // Compute 2.5 and 97.5 percentiles
-  const intervals: Record<string, { lo: number; hi: number }> = {};
+  const loIdx = Math.floor(0.025 * samples);
+  const hiIdx = Math.min(Math.ceil(0.975 * samples) - 1, samples - 1);
+
+  const scoreIntervals: Record<string, { lo: number; hi: number }> = {};
+  const rankIntervals: Record<string, { lower: number; upper: number }> = {};
+
   for (const id of competitorIds) {
-    const sorted = distributions[id].slice().sort((a, b) => a - b);
-    const loIdx = Math.floor(0.025 * samples);
-    const hiIdx = Math.min(Math.ceil(0.975 * samples) - 1, samples - 1);
-    intervals[id] = {
-      lo: sorted[loIdx] ?? sorted[0],
-      hi: sorted[hiIdx] ?? sorted[sorted.length - 1],
+    const sortedScores = scoreDistributions[id].slice().sort((a, b) => a - b);
+    scoreIntervals[id] = {
+      lo: sortedScores[loIdx] ?? sortedScores[0],
+      hi: sortedScores[hiIdx] ?? sortedScores[sortedScores.length - 1],
+    };
+
+    // Ranks: lower percentile means better (smaller rank number = better)
+    const sortedRanks = rankDistributions[id].slice().sort((a, b) => a - b);
+    rankIntervals[id] = {
+      lower: sortedRanks[loIdx] ?? sortedRanks[0],
+      upper: sortedRanks[hiIdx] ?? sortedRanks[sortedRanks.length - 1],
     };
   }
 
-  return intervals;
+  return { scoreIntervals, rankIntervals };
 }

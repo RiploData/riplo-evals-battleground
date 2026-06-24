@@ -14,6 +14,7 @@
 import type { Outcome } from '@/types/contracts';
 import { fitBradleyTerry, PrefRecord } from './bradley-terry';
 import { bootstrapIntervals } from './bootstrap';
+import type { BootstrapResult } from './bootstrap';
 
 export type { Outcome };
 
@@ -116,11 +117,10 @@ export function computeRanking(
   // Fit Bradley–Terry
   const btResult = fitBradleyTerry(competitorIds, prefs);
 
-  // Bootstrap intervals
-  const intervals = bootstrapIntervals(competitorIds, prefs, seed, bootstrapSamples);
+  // Bootstrap intervals (scores and ranks)
+  const bootstrap: BootstrapResult = bootstrapIntervals(competitorIds, prefs, seed, bootstrapSamples);
 
-  // Determine ranks (1 = highest score)
-  // Sort by rawScore descending; ties get the same rank (dense ranking)
+  // Determine point-estimate ranks (1 = highest score, dense ranking)
   const sortedByScore = [...competitorIds].sort(
     (a, b) => (btResult.scores[b] ?? 0) - (btResult.scores[a] ?? 0),
   );
@@ -140,16 +140,6 @@ export function computeRanking(
     ranks[sortedByScore[i]] = currentRank;
   }
 
-  // Bootstrap rank ranges: for each bootstrap sample's score distribution,
-  // derive what rank each competitor would have
-  // We derive rank ranges from the CI intervals
-  // Strategy: compute ranks from the point estimates, then determine
-  // rankLower/rankUpper from CI overlaps
-  //
-  // Approach: simulate rank range by checking, for each competitor,
-  // how many others have confidenceLower above this competitor's confidenceUpper (=> pushes rank down)
-  // and how many others have confidenceUpper below this competitor's confidenceLower (=> pushes rank up)
-
   const result: RankingScore[] = [];
 
   for (const id of competitorIds) {
@@ -157,26 +147,16 @@ export function computeRanking(
     const displayScore = 1500 + DISPLAY_SCALE * rawScore;
     const rank = ranks[id];
 
-    const ci = intervals[id] ?? { lo: rawScore, hi: rawScore };
+    const ci = bootstrap.scoreIntervals[id] ?? { lo: rawScore, hi: rawScore };
     const confidenceLower = ci.lo;
     const confidenceUpper = ci.hi;
 
-    // Rank range: best possible rank = 1 + number of competitors whose CI upper < our CI lower
-    // Worst possible rank = 1 + number of competitors whose CI lower > our CI upper
-    let rankBest = 1;
-    let rankWorst = 1;
-    for (const other of competitorIds) {
-      if (other === id) continue;
-      const otherCi = intervals[other] ?? { lo: btResult.scores[other] ?? 0, hi: btResult.scores[other] ?? 0 };
-      if (otherCi.lo > confidenceUpper) {
-        // other is definitively above us
-        rankBest++;
-        rankWorst++;
-      } else if (otherCi.hi > confidenceLower) {
-        // overlap: other might be above us in worst case
-        rankWorst++;
-      }
-    }
+    // Rank interval from bootstrap rank distribution (2.5/97.5 percentiles).
+    // rankLower = best (smallest) rank, rankUpper = worst (largest) rank.
+    // Clamp so that the point-estimate rank is always within [rankLower, rankUpper].
+    const ri = bootstrap.rankIntervals[id] ?? { lower: rank, upper: rank };
+    const rankLower = Math.min(ri.lower, rank);
+    const rankUpper = Math.max(ri.upper, rank);
 
     const jCount = judgmentCounts[id] ?? 0;
     const tieCount = tieCounts[id] ?? 0;
@@ -187,8 +167,8 @@ export function computeRanking(
       rawScore,
       displayScore,
       rank,
-      rankLower: rankBest,
-      rankUpper: rankWorst,
+      rankLower,
+      rankUpper,
       confidenceLower,
       confidenceUpper,
       judgmentCount: jCount,

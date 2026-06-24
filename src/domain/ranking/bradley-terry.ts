@@ -21,18 +21,27 @@ export interface BTResult {
 /**
  * Fit a Bradley–Terry model using iterative MM updates in natural parameter space.
  *
+ * Includes a small prior regularization (alpha = 0.3): every competitor is given
+ * `alpha` virtual wins and `alpha` virtual losses against a phantom opponent of
+ * average strength (geometric mean of all strengths). This prevents 0-win
+ * competitors from being pinned at 1.0 (the initial value) and prevents
+ * astronomically large strengths in near-separable data, while having negligible
+ * effect on well-determined fits.
+ *
  * @param competitorIds - All competitor IDs (even those with no prefs)
  * @param prefs - Pairwise preference records (ties pre-split into two 0.5-weight records)
  * @param opts.iters - Max iterations (default 1000)
  * @param opts.tol - Convergence tolerance on max |Δ log-strength| (default 1e-9)
+ * @param opts.alpha - Prior weight for regularization (default 0.3)
  */
 export function fitBradleyTerry(
   competitorIds: string[],
   prefs: PrefRecord[],
-  opts?: { iters?: number; tol?: number },
+  opts?: { iters?: number; tol?: number; alpha?: number },
 ): BTResult {
   const iters = opts?.iters ?? 1000;
   const tol = opts?.tol ?? 1e-9;
+  const alpha = opts?.alpha ?? 0.3;
 
   if (competitorIds.length === 0) {
     return { scores: {} };
@@ -73,17 +82,24 @@ export function fitBradleyTerry(
     comparisons.get(b)!.set(a, (comparisons.get(b)!.get(a) ?? 0) + pref.weight);
   }
 
+  const n = competitorIds.length;
+
   for (let iter = 0; iter < iters; iter++) {
+    // Compute geometric-mean strength (phantom opponent strength for the prior)
+    let logSum = 0;
+    for (const id of competitorIds) {
+      logSum += Math.log(strength[id]);
+    }
+    const phantomStrength = Math.exp(logSum / n);
+
     let maxDelta = 0;
 
     for (const id of competitorIds) {
       const wi = wins[id] ?? 0;
-      if (wi === 0) {
-        // No wins: push toward 0 strength but keep positive
-        // In standard BT, competitors with 0 wins have strength → 0
-        // We handle this gracefully by leaving near-zero
-        continue;
-      }
+
+      // Regularized wins and denominator: add alpha virtual wins + alpha virtual losses
+      // against the phantom average opponent.
+      const regWins = wi + alpha;
 
       let denom = 0;
       const rivals = comparisons.get(id);
@@ -92,10 +108,12 @@ export function fitBradleyTerry(
           denom += n_ij / (strength[id] + strength[rival]);
         }
       }
+      // Prior contribution: 2*alpha comparisons against the phantom (alpha wins + alpha losses)
+      denom += (2 * alpha) / (strength[id] + phantomStrength);
 
       if (denom === 0) continue;
 
-      const newStrength = wi / denom;
+      const newStrength = regWins / denom;
       maxDelta = Math.max(maxDelta, Math.abs(Math.log(newStrength) - Math.log(strength[id])));
       strength[id] = newStrength;
     }

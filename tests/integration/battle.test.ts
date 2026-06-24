@@ -138,7 +138,7 @@ async function seedUser(suffix: string): Promise<SessionUser> {
     .values({
       workosUserId,
       email: `battle-test-${suffix}@example.com`,
-      appRole: 'evaluator',
+      appRole: 'member',
       orgId: 'test-org',
     })
     .returning();
@@ -147,7 +147,7 @@ async function seedUser(suffix: string): Promise<SessionUser> {
     id: row.id,
     workosUserId: row.workosUserId,
     email: row.email,
-    appRole: row.appRole as 'evaluator',
+    appRole: row.appRole as 'member',
     orgId: row.orgId,
   };
 }

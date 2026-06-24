@@ -12,7 +12,7 @@ export async function GET(request: Request) {
     return NextResponse.json(body, { status: 401 });
   }
   try {
-    requireRole(user, 'analyst', 'operator', 'admin');
+    requireRole(user, 'admin');
   } catch (err) {
     if (err instanceof ForbiddenError) {
       const body: ApiError = { error: { code: 'FORBIDDEN', message: err.message } };

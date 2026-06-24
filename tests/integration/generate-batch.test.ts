@@ -39,7 +39,7 @@ const operatorUser: SessionUser = {
   id: 'uuid-operator-batch-test',
   workosUserId: 'workos_operator_batch_test',
   email: 'operator@batch.test',
-  appRole: 'operator',
+  appRole: 'admin',
   orgId: 'org_batch_test',
 };
 

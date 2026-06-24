@@ -14,7 +14,7 @@ export async function GET() {
   }
 
   try {
-    requireRole(user, 'analyst', 'operator', 'admin');
+    requireRole(user, 'admin');
   } catch {
     return NextResponse.json(
       { error: { code: 'FORBIDDEN', message: 'Insufficient role' } },

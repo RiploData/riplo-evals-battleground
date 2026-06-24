@@ -2,7 +2,15 @@ import { sql } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { users } from '@/db/schema';
 
-export type AppRole = 'evaluator' | 'suite_editor' | 'operator' | 'analyst' | 'admin';
+export type AppRole = 'member' | 'admin';
+
+/**
+ * Map a WorkOS org membership role slug to an AppRole.
+ * Only 'admin' maps to admin; everything else (including undefined) maps to 'member'.
+ */
+function mapWorkosRole(slug: string | undefined | null): AppRole {
+  return slug === 'admin' ? 'admin' : 'member';
+}
 
 export interface SessionUser {
   id: string;
@@ -28,14 +36,14 @@ export class ForbiddenError extends Error {
 
 /**
  * Atomic upsert keyed by workos_user_id — eliminates the SELECT-then-INSERT race window.
- * On insert, `appRole` defaults to the provided role (or 'evaluator'); on conflict only
- * email/org are refreshed so a manually-elevated role is never silently reset.
+ * WorkOS is source of truth: on both insert and conflict the role is set to the mapped
+ * WorkOS role so it is always synced from the session on every login.
  */
 async function upsertUser(params: {
   workosUserId: string;
   email: string;
   orgId: string;
-  defaultRole?: AppRole;
+  role: AppRole;
 }): Promise<SessionUser> {
   const [userRow] = await db
     .insert(users)
@@ -43,13 +51,14 @@ async function upsertUser(params: {
       workosUserId: params.workosUserId,
       email: params.email,
       orgId: params.orgId,
-      appRole: params.defaultRole ?? 'evaluator',
+      appRole: params.role,
     })
     .onConflictDoUpdate({
       target: users.workosUserId,
       set: {
         email: sql`excluded.email`,
         orgId: sql`excluded.org_id`,
+        appRole: sql`excluded.app_role`,
       },
     })
     .returning();
@@ -69,12 +78,13 @@ export async function requireUser(): Promise<SessionUser> {
   // without an interactive WorkOS login. Real WorkOS is used whenever this is unset.
   if (process.env.NODE_ENV !== 'production' && process.env.ARENA_DEV_AUTH_EMAIL) {
     const email = process.env.ARENA_DEV_AUTH_EMAIL;
-    const role = (process.env.ARENA_DEV_AUTH_ROLE as AppRole | undefined) ?? 'admin';
+    const rawDevRole = process.env.ARENA_DEV_AUTH_ROLE;
+    const role: AppRole = mapWorkosRole(rawDevRole === 'admin' ? 'admin' : rawDevRole ?? 'admin');
     return upsertUser({
       workosUserId: `dev-${email}`,
       email,
       orgId: process.env.ALLOWED_ORG_ID || 'dev-org',
-      defaultRole: role,
+      role,
     });
   }
 
@@ -87,7 +97,7 @@ export async function requireUser(): Promise<SessionUser> {
     throw new UnauthorizedError('No authenticated user');
   }
 
-  const { user, organizationId } = session;
+  const { user, organizationId, role } = session as typeof session & { role?: string };
   const allowedOrgId = process.env.ALLOWED_ORG_ID;
 
   if (!allowedOrgId || organizationId !== allowedOrgId) {
@@ -98,7 +108,7 @@ export async function requireUser(): Promise<SessionUser> {
     workosUserId: user.id,
     email: user.email,
     orgId: organizationId,
-    defaultRole: 'evaluator',
+    role: mapWorkosRole(role),
   });
 }
 

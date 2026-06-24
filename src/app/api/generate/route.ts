@@ -19,7 +19,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   try {
-    requireRole(user, 'operator', 'admin');
+    requireRole(user, 'admin');
   } catch (err) {
     if (err instanceof ForbiddenError) {
       const body: ApiError = {

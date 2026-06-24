@@ -75,7 +75,7 @@ async function seedFullChain(suffix: string) {
       workosUserId: `wos_vote_test_${suffix}`,
       email: `vote_test_${suffix}@example.com`,
       orgId: 'org_vote_test',
-      appRole: 'evaluator',
+      appRole: 'member',
     })
     .returning();
   createdUserIds.push(user.id);
@@ -84,7 +84,7 @@ async function seedFullChain(suffix: string) {
     id: user.id,
     workosUserId: user.workosUserId,
     email: user.email,
-    appRole: 'evaluator',
+    appRole: 'member',
     orgId: user.orgId,
   };
 
@@ -360,7 +360,7 @@ describe('submitVote integration', () => {
         workosUserId: 'wos_vote_other_user',
         email: 'other_vote@example.com',
         orgId: 'org_vote_test',
-        appRole: 'evaluator',
+        appRole: 'member',
       })
       .returning();
     createdUserIds.push(otherUser.id);
@@ -369,7 +369,7 @@ describe('submitVote integration', () => {
       id: otherUser.id,
       workosUserId: otherUser.workosUserId,
       email: otherUser.email,
-      appRole: 'evaluator',
+      appRole: 'member',
       orgId: otherUser.orgId,
     };
 

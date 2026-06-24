@@ -79,7 +79,7 @@ async function seedUser(suffix: string) {
       workosUserId: `wos_export_test_${suffix}`,
       email: `export-test-${suffix}@example.com`,
       orgId: 'org_export_test',
-      appRole: 'evaluator',
+      appRole: 'member',
     })
     .returning({ id: users.id });
   createdIds.userIds.push(u.id);

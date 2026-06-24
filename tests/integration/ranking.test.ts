@@ -93,13 +93,15 @@ afterAll(async () => {
 // ---- Seed helpers ----
 
 const SUFFIX = `ranking-${Date.now()}`;
+let _userCounter = 0;
 
 async function seedUser(role: string): Promise<SessionUser & { dbId: string }> {
+  const idx = _userCounter++;
   const [row] = await db
     .insert(users)
     .values({
-      workosUserId: `workos-test-${SUFFIX}-${role}`,
-      email: `${role}-${SUFFIX}@test.com`,
+      workosUserId: `workos-test-${SUFFIX}-${role}-${idx}`,
+      email: `${role}-${idx}-${SUFFIX}@test.com`,
       appRole: role,
       orgId: 'org-test-ranking',
     })
@@ -288,7 +290,7 @@ async function seedJudgmentXBeatsY(
 
 describe('ranking service integration', () => {
   it('createRankingRun: X ranks above Y with a higher display_score when X beats Y consistently', async () => {
-    const operator = await seedUser('operator');
+    const operator = await seedUser('admin');
     const fixture = await seedFixture();
 
     // Seed 5 judgments where X beats Y
@@ -371,7 +373,7 @@ describe('ranking service integration', () => {
   });
 
   it('getLeaderboard: returns rows sorted by rank with CI fields populated', async () => {
-    const operator = await seedUser('analyst');
+    const operator = await seedUser('admin');
     const fixture = await seedFixture();
 
     for (let i = 0; i < 5; i++) {
@@ -405,8 +407,8 @@ describe('ranking service integration', () => {
     }
   });
 
-  it('requireRole gating: evaluator cannot createRankingRun (throws ForbiddenError)', async () => {
-    const evaluator = await seedUser('evaluator');
+  it('requireRole gating: member cannot createRankingRun (throws ForbiddenError)', async () => {
+    const evaluator = await seedUser('member');
     const fixture = await seedFixture();
 
     await expect(

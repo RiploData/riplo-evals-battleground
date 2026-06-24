@@ -10,7 +10,7 @@ export default async function GeneratePage() {
   const user = await requireUser();
 
   try {
-    requireRole(user, 'operator', 'admin');
+    requireRole(user, 'admin');
   } catch {
     return (
       <div style={{ color: '#b91c1c', fontFamily: sans, fontSize: 14 }}>

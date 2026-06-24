@@ -1,0 +1,1 @@
+ALTER TABLE "users" ALTER COLUMN "app_role" SET DEFAULT 'member';

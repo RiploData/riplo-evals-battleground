@@ -27,7 +27,7 @@ export async function createRankingRun(
   user: SessionUser,
   opts: CreateRankingRunOpts,
 ): Promise<{ rankingRunId: string }> {
-  requireRole(user, 'operator', 'analyst', 'admin');
+  requireRole(user, 'admin');
 
   const { campaignId, voteCutoffAt, filters, seed } = opts;
   const effectiveSeed = seed ?? DEFAULT_SEED;

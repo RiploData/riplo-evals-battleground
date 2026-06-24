@@ -5,7 +5,7 @@ import { segments } from '@/services/reports';
 export async function GET(request: Request): Promise<NextResponse> {
   try {
     const user = await requireUser();
-    requireRole(user, 'analyst', 'operator', 'admin');
+    requireRole(user, 'admin');
 
     const { searchParams } = new URL(request.url);
     const rankingRunId = searchParams.get('rankingRunId') ?? undefined;

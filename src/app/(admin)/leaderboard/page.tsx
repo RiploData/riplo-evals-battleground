@@ -21,7 +21,7 @@ export default async function LeaderboardPage() {
   const user = await requireUser();
 
   try {
-    requireRole(user, 'analyst', 'operator', 'admin');
+    requireRole(user, 'admin');
   } catch {
     return (
       <div style={{ color: '#b91c1c', fontFamily: sans, fontSize: 14 }}>

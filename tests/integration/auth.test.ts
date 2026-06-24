@@ -49,7 +49,7 @@ describe('requireUser', () => {
     expect(sessionUser.workosUserId).toBe(TEST_USER_ALLOWED_ID);
     expect(sessionUser.email).toBe('allowed@test.com');
     expect(sessionUser.orgId).toBe(ALLOWED_ORG);
-    expect(sessionUser.appRole).toBe('evaluator'); // default role
+    expect(sessionUser.appRole).toBe('member'); // default role when no role in session
     expect(sessionUser.id).toBeTruthy(); // uuid assigned by DB
 
     // Verify row actually exists in DB
@@ -98,11 +98,11 @@ describe('requireUser', () => {
 });
 
 describe('requireRole', () => {
-  const evaluatorUser: SessionUser = {
-    id: 'uuid-eval',
-    workosUserId: 'workos_eval',
-    email: 'eval@test.com',
-    appRole: 'evaluator',
+  const memberUser: SessionUser = {
+    id: 'uuid-member',
+    workosUserId: 'workos_member',
+    email: 'member@test.com',
+    appRole: 'member',
     orgId: ALLOWED_ORG,
   };
 
@@ -114,16 +114,50 @@ describe('requireRole', () => {
     orgId: ALLOWED_ORG,
   };
 
-  it('(c) throws ForbiddenError when evaluator requires admin role', () => {
-    expect(() => requireRole(evaluatorUser, 'admin')).toThrow(ForbiddenError);
-    expect(() => requireRole(evaluatorUser, 'admin')).toThrow('admin');
+  it('(c) throws ForbiddenError when member requires admin role', () => {
+    expect(() => requireRole(memberUser, 'admin')).toThrow(ForbiddenError);
+    expect(() => requireRole(memberUser, 'admin')).toThrow('admin');
   });
 
   it('(d) does not throw when adminUser has the admin role', () => {
     expect(() => requireRole(adminUser, 'admin')).not.toThrow();
   });
+});
 
-  it('allows multiple accepted roles', () => {
-    expect(() => requireRole(evaluatorUser, 'evaluator', 'admin')).not.toThrow();
+describe('WorkOS role mapping', () => {
+  it('maps WorkOS admin role to app admin', async () => {
+    const mockWithAuth = (await import('@workos-inc/authkit-nextjs')).withAuth as ReturnType<typeof vi.fn>;
+    mockWithAuth.mockResolvedValueOnce({
+      user: { id: 'workos_role_map_admin', email: 'roleadmin@test.com' },
+      organizationId: ALLOWED_ORG,
+      role: 'admin',
+      sessionId: 'sess_role_admin',
+      accessToken: 'tok_role_admin',
+    });
+    const session = await requireUser();
+    expect(session.appRole).toBe('admin');
+    // cleanup
+    const { db } = await import('@/db/client');
+    const { users } = await import('@/db/schema');
+    const { eq } = await import('drizzle-orm');
+    await db.delete(users).where(eq(users.workosUserId, 'workos_role_map_admin'));
+  });
+
+  it('maps WorkOS member (or unknown) role to app member', async () => {
+    const mockWithAuth = (await import('@workos-inc/authkit-nextjs')).withAuth as ReturnType<typeof vi.fn>;
+    mockWithAuth.mockResolvedValueOnce({
+      user: { id: 'workos_role_map_member', email: 'rolemember@test.com' },
+      organizationId: ALLOWED_ORG,
+      role: 'member',
+      sessionId: 'sess_role_member',
+      accessToken: 'tok_role_member',
+    });
+    const session = await requireUser();
+    expect(session.appRole).toBe('member');
+    // cleanup
+    const { db } = await import('@/db/client');
+    const { users } = await import('@/db/schema');
+    const { eq } = await import('drizzle-orm');
+    await db.delete(users).where(eq(users.workosUserId, 'workos_role_map_member'));
   });
 });

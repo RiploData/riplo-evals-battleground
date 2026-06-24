@@ -91,7 +91,7 @@ async function seedUser() {
   const suffix = tag();
   const [u] = await db
     .insert(users)
-    .values({ workosUserId: `wos-rpt-${suffix}`, email: `rpt-${suffix}@test.com`, orgId: 'org-test', appRole: 'evaluator' })
+    .values({ workosUserId: `wos-rpt-${suffix}`, email: `rpt-${suffix}@test.com`, orgId: 'org-test', appRole: 'member' })
     .returning({ id: users.id });
   ids.userIds.push(u.id);
   return u.id;

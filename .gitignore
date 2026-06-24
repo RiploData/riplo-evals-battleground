@@ -40,3 +40,14 @@ next-env.d.ts
 
 # superpowers
 .superpowers/
+
+# terraform (keep .terraform.lock.hcl committed for provider pinning)
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+crash.log
+crash.*.log
+.terraformrc
+terraform.rc

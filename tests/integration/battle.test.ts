@@ -284,6 +284,8 @@ const BANNED_FIELDS = [
   'author_user_id',
   'length_chars',
   'length_tokens',
+  'model_identifier',
+  'prompt_bundle',
 ];
 
 function assertNoProvenanceFields(options: unknown[]): void {

@@ -43,21 +43,17 @@ export async function submitVote(user: SessionUser, req: VoteRequest): Promise<V
   let rewriteResponseId: string | undefined;
   let rewriteForkedFrom: string | undefined;
 
+  // Fetch comparison before transaction (read-only, no race condition concern)
+  let comparisonCaseVersionId: string | undefined;
   if (req.rewrite) {
     const { forked_from, body_text } = req.rewrite;
+
+    if (!body_text || body_text.trim() === '') {
+      throw new VoteError('Rewrite body_text is required and must not be empty', 'BAD_REQUEST', 400);
+    }
+
     rewriteForkedFrom = forked_from;
 
-    // Determine parent_response_ids from forked side:
-    // 'a' → left response, 'b' → right response, 'scratch' → no parents
-    let parentResponseIds: string[] | null = null;
-    if (forked_from === 'a') {
-      parentResponseIds = [assignment.leftResponseId];
-    } else if (forked_from === 'b') {
-      parentResponseIds = [assignment.rightResponseId];
-    }
-    // 'scratch' → parentResponseIds stays null
-
-    // We need the caseVersionId from the comparison
     const [comparison] = await db
       .select()
       .from(comparisons)
@@ -68,22 +64,7 @@ export async function submitVote(user: SessionUser, req: VoteRequest): Promise<V
       throw new VoteError('Comparison not found', 'COMPARISON_NOT_FOUND', 500);
     }
 
-    const hash = contentHash({ body_text, author_user_id: user.id, forked_from });
-
-    const [rewriteRow] = await db
-      .insert(responses)
-      .values({
-        caseVersionId: comparison.caseVersionId,
-        originType: 'post_battle_rewrite',
-        authorUserId: user.id,
-        bodyText: body_text,
-        lengthChars: body_text.length,
-        parentResponseIds: parentResponseIds ?? undefined,
-        contentHash: hash,
-      })
-      .returning({ id: responses.id });
-
-    rewriteResponseId = rewriteRow.id;
+    comparisonCaseVersionId = comparison.caseVersionId;
   }
 
   // 4. Resolve preferred_response_id using assignment's recorded left/right order
@@ -93,28 +74,63 @@ export async function submitVote(user: SessionUser, req: VoteRequest): Promise<V
     assignment.rightResponseId,
   );
 
-  // 5. Insert append-only judgment and mark assignment submitted (in sequence)
-  const [judgment] = await db
-    .insert(judgments)
-    .values({
-      assignmentId: req.assignment_id,
-      userId: user.id,
-      outcome,
-      preferredResponseId: preferredResponseId ?? undefined,
-      reasonTags: req.reason_tags ?? [],
-      freeTextComment: req.free_text_comment,
-      timeToFirstActionMs: req.time_to_first_action_ms,
-      totalDurationMs: req.total_duration_ms,
-      rewriteResponseId,
-      rewriteForkedFrom,
-      status: 'valid',
-    })
-    .returning({ id: judgments.id });
+  // 5. Atomically: insert rewrite response (if any), insert judgment, mark assignment submitted
+  const judgment = await db.transaction(async (tx) => {
+    if (req.rewrite && comparisonCaseVersionId) {
+      const { forked_from, body_text } = req.rewrite;
 
-  await db
-    .update(assignments)
-    .set({ status: 'submitted', submittedAt: new Date() })
-    .where(eq(assignments.id, req.assignment_id));
+      // Determine parent_response_ids from forked side:
+      // 'a' → left response, 'b' → right response, 'scratch' → no parents
+      let parentResponseIds: string[] | null = null;
+      if (forked_from === 'a') {
+        parentResponseIds = [assignment.leftResponseId];
+      } else if (forked_from === 'b') {
+        parentResponseIds = [assignment.rightResponseId];
+      }
+      // 'scratch' → parentResponseIds stays null
+
+      const hash = contentHash({ body_text, author_user_id: user.id, forked_from });
+
+      const [rewriteRow] = await tx
+        .insert(responses)
+        .values({
+          caseVersionId: comparisonCaseVersionId,
+          originType: 'post_battle_rewrite',
+          authorUserId: user.id,
+          bodyText: body_text,
+          lengthChars: body_text.length,
+          parentResponseIds: parentResponseIds ?? undefined,
+          contentHash: hash,
+        })
+        .returning({ id: responses.id });
+
+      rewriteResponseId = rewriteRow.id;
+    }
+
+    const [insertedJudgment] = await tx
+      .insert(judgments)
+      .values({
+        assignmentId: req.assignment_id,
+        userId: user.id,
+        outcome,
+        preferredResponseId: preferredResponseId ?? undefined,
+        reasonTags: req.reason_tags ?? [],
+        freeTextComment: req.free_text_comment,
+        timeToFirstActionMs: req.time_to_first_action_ms,
+        totalDurationMs: req.total_duration_ms,
+        rewriteResponseId,
+        rewriteForkedFrom,
+        status: 'valid',
+      })
+      .returning({ id: judgments.id });
+
+    await tx
+      .update(assignments)
+      .set({ status: 'submitted', submittedAt: new Date() })
+      .where(eq(assignments.id, req.assignment_id));
+
+    return insertedJudgment;
+  });
 
   // 6. Return judgment_id and next route
   return { judgment_id: judgment.id, next: '/battle' };

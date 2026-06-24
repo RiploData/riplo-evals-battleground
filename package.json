@@ -18,6 +18,7 @@
     "seed:dev-responses": "tsx scripts/seed-dev-responses.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.106.0",
     "@workos-inc/authkit-nextjs": "^0.16.0",
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.44.2",

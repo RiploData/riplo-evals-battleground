@@ -97,7 +97,11 @@ export async function ensureResponse(
     throw new Error(`competitorVersion not found: ${competitorVersionId}`);
   }
 
-  const modelIdentifier = competitorVersion.modelIdentifier ?? 'unknown';
+  if (!competitorVersion.modelIdentifier) {
+    throw new Error(`Competitor version ${competitorVersionId} has no model_identifier`);
+  }
+
+  const modelIdentifier = competitorVersion.modelIdentifier;
   const runnerInput = (caseVersion.runnerInputJson ?? {}) as Record<string, unknown>;
   const promptBundle = (competitorVersion.promptBundleJson ?? {}) as Record<string, unknown>;
   const modelParams = (competitorVersion.modelParametersJson ?? {}) as Record<string, unknown>;

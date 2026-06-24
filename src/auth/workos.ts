@@ -1,5 +1,5 @@
 import { withAuth } from '@workos-inc/authkit-nextjs';
-import { eq } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { users } from '@/db/schema';
 
@@ -41,36 +41,23 @@ export async function requireUser(): Promise<SessionUser> {
     throw new UnauthorizedError('Organization not allowed');
   }
 
-  // Upsert user row keyed by workos_user_id
-  const existingRows = await db
-    .select()
-    .from(users)
-    .where(eq(users.workosUserId, user.id))
-    .limit(1);
-
-  let userRow = existingRows[0];
-
-  if (!userRow) {
-    // Insert new user with default role
-    const inserted = await db
-      .insert(users)
-      .values({
-        workosUserId: user.id,
-        email: user.email,
-        orgId: organizationId,
-        appRole: 'evaluator',
-      })
-      .returning();
-    userRow = inserted[0];
-  } else {
-    // Update email and orgId if changed
-    const updated = await db
-      .update(users)
-      .set({ email: user.email, orgId: organizationId })
-      .where(eq(users.workosUserId, user.id))
-      .returning();
-    userRow = updated[0];
-  }
+  // Atomic upsert keyed by workos_user_id — eliminates SELECT-then-INSERT race window
+  const [userRow] = await db
+    .insert(users)
+    .values({
+      workosUserId: user.id,
+      email: user.email,
+      orgId: organizationId,
+      appRole: 'evaluator',
+    })
+    .onConflictDoUpdate({
+      target: users.workosUserId,
+      set: {
+        email: sql`excluded.email`,
+        orgId: sql`excluded.org_id`,
+      },
+    })
+    .returning();
 
   return {
     id: userRow.id,

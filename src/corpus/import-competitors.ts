@@ -183,16 +183,7 @@ export async function importCompetitors(rootDir: string): Promise<ImportResult> 
         resolvedSystemPrompt = await fs.readFile(promptPath, 'utf-8');
       }
 
-      // Build the resolved execution contract for content-addressing
-      const resolvedBundle = {
-        ...versionData.prompt_bundle,
-        ...(resolvedSystemPrompt !== undefined
-          ? { system_prompt: resolvedSystemPrompt }
-          : {}),
-        // Remove the ref since we've resolved it
-        system_prompt_ref: undefined,
-      };
-      // Clean up undefined fields
+      // Clean up undefined fields for content-addressing
       const cleanBundle: Record<string, unknown> = {};
       if (resolvedSystemPrompt !== undefined) cleanBundle['system_prompt'] = resolvedSystemPrompt;
       if (versionData.prompt_bundle.skills !== undefined)
@@ -208,11 +199,11 @@ export async function importCompetitors(rootDir: string): Promise<ImportResult> 
 
       const hash = contentHash(executionContract);
 
-      // Check if this exact content hash already exists (globally — across all competitors)
+      // Check if this exact content hash already exists for THIS competitor
       const existingByHash = await db
         .select({ id: competitorVersions.id })
         .from(competitorVersions)
-        .where(eq(competitorVersions.contentHash, hash))
+        .where(and(eq(competitorVersions.competitorId, competitorId), eq(competitorVersions.contentHash, hash)))
         .limit(1);
 
       if (existingByHash.length > 0) {

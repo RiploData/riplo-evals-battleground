@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
 
 const STORAGE_ROOT = join(process.cwd(), '.storage');
 
@@ -15,7 +15,7 @@ function ensureDir(dir: string): void {
  */
 export function putBlob(key: string, bytes: Buffer | Uint8Array): void {
   const filePath = join(STORAGE_ROOT, key);
-  const dir = filePath.substring(0, filePath.lastIndexOf('/'));
+  const dir = dirname(filePath);
   ensureDir(dir);
   writeFileSync(filePath, bytes);
 }

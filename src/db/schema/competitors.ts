@@ -1,4 +1,13 @@
-import { pgTable, uuid, text, timestamp, jsonb, integer, unique } from 'drizzle-orm/pg-core';
+import {
+  pgTable,
+  uuid,
+  text,
+  timestamp,
+  jsonb,
+  integer,
+  unique,
+  type AnyPgColumn,
+} from 'drizzle-orm/pg-core';
 import { users } from './identity';
 
 export const competitors = pgTable('competitors', {
@@ -17,7 +26,7 @@ export const competitorVersions = pgTable(
       .references(() => competitors.id),
     version: integer('version').notNull(),
     parentCompetitorVersionId: uuid('parent_competitor_version_id').references(
-      () => competitorVersions.id,
+      (): AnyPgColumn => competitorVersions.id,
     ),
     modelProvider: text('model_provider'),
     modelIdentifier: text('model_identifier'),

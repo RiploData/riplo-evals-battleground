@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Check, PenLine, CornerDownLeft, ArrowUp, ArrowDown, Pencil, ArrowLeft, FileText, List } from 'lucide-react';
+import Markdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { t, sans, serif, mono } from '@/ui/tokens';
 import type { BattlePayload, BattleOption, VoteRequest, Outcome, RewriteForkedFrom } from '@/types/contracts';
 
@@ -217,11 +219,14 @@ export default function BattleClient() {
       key={opt.label}
       className="opt"
       style={{
+        flex: '1 1 0', minHeight: 0,
+        display: 'flex', flexDirection: 'column',
         background: t.card, border: `1px solid ${t.line}`,
-        borderRadius: 14, padding: '16px 18px 18px',
+        borderRadius: 14, padding: '16px 18px 0',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+      {/* Fixed header row */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flex: '0 0 auto' }}>
         <span style={{
           fontFamily: mono, fontSize: 13, fontWeight: 600, border: `1px solid ${t.line}`,
           borderRadius: 7, width: 26, height: 26, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
@@ -238,10 +243,10 @@ export default function BattleClient() {
           <Pencil size={12.5} /> Rewrite this version
         </button>
       </div>
-      {/* body_text only — provenance and length never shown */}
-      <p style={{ margin: 0, fontFamily: serif, fontSize: 15, lineHeight: 1.62, color: t.ink }}>
-        {opt.body_text}
-      </p>
+      {/* body_text only — provenance and length never shown. Markdown-rendered, scrolls independently. */}
+      <div className="scroll md" style={{ flex: 1, minHeight: 0, overflow: 'auto', paddingBottom: 18, paddingRight: 4 }}>
+        <Markdown remarkPlugins={[remarkGfm]}>{opt.body_text}</Markdown>
+      </div>
     </article>
   );
 
@@ -257,6 +262,21 @@ export default function BattleClient() {
         .opt { transition: box-shadow .18s ease, border-color .18s ease; }
         .opt:hover { box-shadow: 0 6px 22px rgba(20,20,26,.06); }
         .scroll::-webkit-scrollbar { width: 8px; } .scroll::-webkit-scrollbar-thumb { background:${t.line}; border-radius:99px; }
+        .md { font-family: ${serif}; font-size: 15px; line-height: 1.62; color: ${t.ink}; }
+        .md > :first-child { margin-top: 0; } .md > :last-child { margin-bottom: 0; }
+        .md p { margin: 0 0 10px; }
+        .md strong { font-weight: 700; } .md em { font-style: italic; }
+        .md ul, .md ol { margin: 0 0 10px; padding-left: 22px; }
+        .md li { margin-bottom: 4px; } .md li > ul, .md li > ol { margin-top: 4px; }
+        .md h1, .md h2, .md h3, .md h4 { font-family: ${sans}; font-weight: 600; line-height: 1.3; margin: 14px 0 8px; }
+        .md h1 { font-size: 18px; } .md h2 { font-size: 16px; } .md h3, .md h4 { font-size: 15px; }
+        .md code { font-family: ${mono}; font-size: 13px; background: ${t.lineSoft}; padding: 1px 5px; border-radius: 4px; }
+        .md pre { background: ${t.lineSoft}; padding: 12px; border-radius: 8px; overflow: auto; } .md pre code { background: none; padding: 0; }
+        .md blockquote { margin: 0 0 10px; padding-left: 12px; border-left: 3px solid ${t.line}; color: ${t.inkSoft}; }
+        .md a { color: ${t.accent}; }
+        .md table { border-collapse: collapse; margin: 0 0 10px; font-size: 14px; }
+        .md th, .md td { border: 1px solid ${t.line}; padding: 4px 9px; text-align: left; }
+        .md hr { border: none; border-top: 1px solid ${t.line}; margin: 14px 0; }
         .reveal { animation: fade .2s ease both; }
         @keyframes fade { from{opacity:0;transform:translateY(4px);} to{opacity:1;transform:none;} }
         @media (max-width: 880px){ .panes{ grid-template-columns:1fr !important; height:auto !important; }
@@ -404,10 +424,9 @@ export default function BattleClient() {
               {mode !== 'rewriting' && (
                 <>
                   <div
-                    className="scroll"
                     style={{
-                      flex: 1, minHeight: 0, overflow: 'auto', display: 'flex',
-                      flexDirection: 'column', gap: 14, paddingRight: 2,
+                      flex: 1, minHeight: 0, display: 'flex',
+                      flexDirection: 'column', gap: 14,
                     }}
                   >
                     {options.map((opt) => renderOption(opt))}

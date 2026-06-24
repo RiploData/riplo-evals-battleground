@@ -12,6 +12,9 @@ export default defineConfig({
     globalSetup: './tests/global-setup.ts',
     env: {
       DATABASE_URL: 'postgres://arena:arena@localhost:5544/arena_test',
+      // Keep the dev-auth bypass OFF during tests so the WorkOS path is exercised.
+      // (dotenv/config in test files will not override an already-set key.)
+      ARENA_DEV_AUTH_EMAIL: '',
     },
   },
   resolve: {

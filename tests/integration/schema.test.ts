@@ -117,6 +117,43 @@ describe('schema integration', () => {
     });
   });
 
+  it('blocks UPDATE of case_versions.content_hash (immutability guard)', async () => {
+    await withRollback(async (client) => {
+      const {
+        rows: [{ suite_id }],
+      } = await client.query<{ suite_id: string }>(`
+        INSERT INTO suites (name) VALUES ('Test Suite CV') RETURNING id AS suite_id
+      `);
+      const {
+        rows: [{ case_id }],
+      } = await client.query<{ case_id: string }>(
+        `INSERT INTO cases (suite_id) VALUES ($1) RETURNING id AS case_id`,
+        [suite_id],
+      );
+      const {
+        rows: [{ cv_id }],
+      } = await client.query<{ cv_id: string }>(
+        `
+        INSERT INTO case_versions
+          (case_id, version, kind, title, output_spec_json, runner_input_json,
+           evaluator_context_json, content_hash)
+        VALUES ($1, 1, 'compression', 'Test Case',
+                '{}', '{}', '{}', 'case-hash-immutable')
+        RETURNING id AS cv_id
+      `,
+        [case_id],
+      );
+
+      // Attempt to mutate content_hash — should throw
+      await expect(
+        client.query(
+          `UPDATE case_versions SET content_hash = 'tampered' WHERE id = $1`,
+          [cv_id],
+        ),
+      ).rejects.toThrow(/immutable/i);
+    });
+  });
+
   it('allows UPDATE of non-contract columns on responses (status)', async () => {
     await withRollback(async (client) => {
       const {

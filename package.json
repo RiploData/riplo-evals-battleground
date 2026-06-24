@@ -14,7 +14,8 @@
     "db:migrate": "tsx src/db/migrate.ts",
     "seed": "tsx scripts/seed.ts",
     "cases:validate": "tsx scripts/validate.ts",
-    "cases:smoke": "tsx scripts/smoke.ts"
+    "cases:smoke": "tsx scripts/smoke.ts",
+    "seed:dev-responses": "tsx scripts/seed-dev-responses.ts"
   },
   "dependencies": {
     "@workos-inc/authkit-nextjs": "^0.16.0",

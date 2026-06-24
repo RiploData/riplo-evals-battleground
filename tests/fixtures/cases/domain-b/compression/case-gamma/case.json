@@ -1,0 +1,32 @@
+{
+  "kind": "compression",
+  "title": "Distil this market sizing analysis to its key numbers",
+  "guidance": "Reward the version that gives a partner the number and the logic, not the one that restates methodology.",
+  "output_spec": {
+    "target": "Partner briefing slide",
+    "parts": [
+      { "type": "title", "label": "Market size headline", "note": "one line with £/$" },
+      { "type": "bullets", "label": "Supporting logic", "note": "3 bullets" }
+    ]
+  },
+  "runner_input": {
+    "instruction": "Compress the market sizing analysis below to its key numbers and logic.",
+    "constraints": "Max 200 words. State the addressable market and the critical assumptions."
+  },
+  "source_blocks": [
+    { "type": "text", "text": "UK B2B compliance software market. Bottom-up from 18,000 mid-market firms x £12k average contract value." },
+    { "type": "bullets", "items": [
+      "Total addressable: ~£216m, penetration today ~4%",
+      "Adjacent market (HR compliance): £380m, overlap 60%",
+      "Growth driver: regulatory change (ESG reporting mandates 2026)"
+    ]}
+  ],
+  "hidden_metadata": {
+    "domain": "domain-b",
+    "difficulty": "easy",
+    "failure_modes": ["methodology-regurgitation", "missing-assumptions"]
+  },
+  "tags": ["domain-b", "compression", "market-sizing", "fixture"],
+  "dataset_split": "dev",
+  "suite": "Fixture Suite v1"
+}

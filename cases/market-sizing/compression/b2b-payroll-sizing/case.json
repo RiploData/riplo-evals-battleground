@@ -1,0 +1,40 @@
+{
+  "kind": "compression",
+  "title": "Compress this payroll-software market sizing to its investable thesis",
+  "guidance": "Reward the version that connects the market number to an investment thesis. Penalise the version that merely summarises the data without a point of view.",
+  "output_spec": {
+    "target": "Investment memo market section (half page)",
+    "parts": [
+      { "type": "title", "label": "Market headline", "note": "size + growth rate in one line" },
+      { "type": "bullets", "label": "Thesis bullets", "note": "3 bullets: why now, why here, what is the wedge" }
+    ]
+  },
+  "runner_input": {
+    "instruction": "Compress the market sizing below into the market section of an investment memo. Connect the numbers to a thesis.",
+    "constraints": "Max 220 words. State market size and growth. Explain why now and what the wedge is. Skip background and methodology."
+  },
+  "source_blocks": [
+    { "type": "text", "text": "UK SME payroll software market. Sizing based on ONS business count data: 1.4m businesses with 5–249 employees; approximately 60% (840k) currently using dedicated payroll software; the remaining 40% (560k) still using spreadsheets or accountant-managed payroll." },
+    { "type": "bullets", "items": [
+      "Current dedicated-payroll SAM: ~£1.1bn (840k firms x £1.3k avg ACV)",
+      "Greenfield opportunity (switchers from manual): ~£730m at same ACV",
+      "Total SME payroll SAM: ~£1.8bn",
+      "Market growing ~11% YoY driven by auto-enrolment complexity, IR35 enforcement, and RTI mandate upgrades",
+      "Incumbent weakness: two legacy players hold 55% share but have not shipped a major product update in 3+ years; NPS in customer surveys averages 18",
+      "New entrant tailwind: open banking (bank-feed payroll reconciliation) and HMRC API modernisation (2025 rollout) lower the build cost for challengers"
+    ]}
+  ],
+  "hidden_metadata": {
+    "domain": "market-sizing",
+    "difficulty": "medium",
+    "failure_modes": ["restating-methodology", "leading-with-TAM-not-SAM", "missing-incumbent-weakness-as-wedge"]
+  },
+  "tags": ["market-sizing", "payroll", "smb", "compression", "uk"],
+  "dataset_split": "dev",
+  "rubric_notes": [
+    "The investable thesis is: large SAM (£1.8bn), incumbents with low NPS and no recent innovation, and a structural tailwind from HMRC API modernisation that lowers build cost.",
+    "The wedge is open banking + HMRC API — not just market size.",
+    "Penalise responses that lead with the total SAM without connecting it to why now and what makes displacement achievable."
+  ],
+  "suite": "Riplo Consulting v1"
+}

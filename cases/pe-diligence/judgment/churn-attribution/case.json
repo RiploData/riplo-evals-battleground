@@ -1,0 +1,40 @@
+{
+  "kind": "judgment",
+  "title": "Where is churn actually coming from?",
+  "guidance": "Reward the response that diagnoses the structural driver, not the one that lists contributing factors. The board needs one clear answer to act on.",
+  "output_spec": {
+    "target": "Board pre-read note",
+    "parts": [
+      { "type": "title", "label": "Root cause", "note": "one line" },
+      { "type": "text", "label": "Diagnosis", "note": "2–3 sentences max" }
+    ]
+  },
+  "runner_input": {
+    "instruction": "Diagnose the root cause of churn from the data below. The board needs to know where to intervene.",
+    "constraints": "State one root cause, then diagnose it in 2–3 sentences. Do not list multiple causes equally — take a stance."
+  },
+  "source_blocks": [
+    { "type": "text", "text": "A £20m ARR B2B SaaS business is experiencing 18% gross churn — up from 11% two years ago. The CFO wants to know where to focus the retention budget." },
+    { "type": "bullets", "items": [
+      "Churn by segment: Enterprise <5% | Mid-market 14% | SME 31%",
+      "Churn by product age: accounts on v1 product 28% | accounts on v2 product 8%",
+      "Churn by CSM coverage: covered accounts 9% | uncovered accounts 26%",
+      "Top exit survey reason (SME, uncovered): 'too complex for our team size'",
+      "v2 product launched 14 months ago; migration to v2 is opt-in and at 38% adoption"
+    ]}
+  ],
+  "hidden_metadata": {
+    "domain": "pe-diligence",
+    "difficulty": "hard",
+    "failure_modes": ["listing-all-three-drivers-equally", "missing-product-fit-signal", "recommending-budget-not-diagnosis"]
+  },
+  "tags": ["pe-diligence", "portfolio-ops", "churn", "judgment", "saas-metrics"],
+  "dataset_split": "dev",
+  "rubric_notes": [
+    "The structural driver is v1 product-market fit collapse in the SME segment — the three signals triangulate: SME churn 31%, v1 churn 28%, 'too complex' exit reason.",
+    "CSM coverage is a symptom amplifier, not the root cause — covered accounts churn at 9% even on v1.",
+    "The right intervention is accelerating v2 migration in SME, not expanding CSM headcount.",
+    "Penalise responses that present all three dimensions (segment, product, CSM) as equally causal."
+  ],
+  "suite": "Riplo Consulting v1"
+}

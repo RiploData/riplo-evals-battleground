@@ -1,0 +1,39 @@
+{
+  "kind": "compression",
+  "title": "Compress this market sizing analysis to the number that matters and why",
+  "guidance": "Reward the version that gives a partner the number, the logic, and the critical assumption — not the one that restates the methodology.",
+  "output_spec": {
+    "target": "Partner briefing slide",
+    "parts": [
+      { "type": "title", "label": "Market size headline", "note": "one line with £ figure" },
+      { "type": "bullets", "label": "Supporting logic", "note": "3 bullets: bottoms-up logic, key assumption, growth driver" }
+    ]
+  },
+  "runner_input": {
+    "instruction": "Compress the market sizing analysis below to its key number and the logic behind it for a partner briefing slide.",
+    "constraints": "Max 200 words. State the addressable market, the critical assumption, and the primary growth driver. Skip methodology detail."
+  },
+  "source_blocks": [
+    { "type": "text", "text": "UK B2B compliance and regulatory-reporting software market. Bottom-up sizing from a survey of 18,000 mid-market firms (50–500 employees). Average contract value benchmarked at £12k/year for a full compliance-suite subscription." },
+    { "type": "bullets", "items": [
+      "Total addressable: ~£216m (18,000 firms x £12k ACV)",
+      "Current penetration: ~4% (dedicated software); remainder still using spreadsheets or outsourced advisors",
+      "Adjacent market (HR compliance overlay): ~£380m; 60% customer overlap with compliance buyers",
+      "Primary growth driver: ESG reporting mandate (UK CSRD equivalent) expected 2026 — will force mid-market firms to adopt structured reporting for the first time",
+      "Serviceable addressable (realistic ICP): £78m (firms with 100–500 employees, recurring IT budget >£50k)"
+    ]}
+  ],
+  "hidden_metadata": {
+    "domain": "market-sizing",
+    "difficulty": "easy",
+    "failure_modes": ["methodology-regurgitation", "missing-SAM-vs-TAM-distinction", "treating-adjacent-market-as-core"]
+  },
+  "tags": ["market-sizing", "compliance", "saas", "uk", "compression"],
+  "dataset_split": "dev",
+  "rubric_notes": [
+    "The number that matters is the SAM (£78m), not the TAM (£216m) — the ICP filter is the critical assumption.",
+    "The ESG mandate growth driver is the most actionable insight for investment timing.",
+    "Penalise responses that lead with the adjacent market (£380m) without explaining why it is not the core opportunity."
+  ],
+  "suite": "Riplo Consulting v1"
+}

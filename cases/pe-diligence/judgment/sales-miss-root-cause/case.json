@@ -1,0 +1,40 @@
+{
+  "kind": "judgment",
+  "title": "What is the single most important thing here?",
+  "guidance": "Reward insight and restraint over coverage — the one thing that should change the decision.",
+  "output_spec": {
+    "target": "Board slide",
+    "parts": [
+      { "type": "title", "label": "Slide title", "note": "one line" },
+      { "type": "text", "label": "Lead insight", "note": "1–2 sentences" }
+    ]
+  },
+  "runner_input": {
+    "instruction": "Identify the single most important insight from the data below. This will become the lead slide at a board meeting.",
+    "constraints": "One slide title and 1–2 sentences of insight. No bullet lists. Prioritise what changes the decision, not what recaps the situation."
+  },
+  "source_blocks": [
+    { "type": "text", "text": "A portfolio company missed its quarterly revenue target by 6%. The CRO has proposed increasing marketing spend 30% to 'refill the top of funnel.'" },
+    { "type": "bullets", "items": [
+      "MQLs up 22% QoQ",
+      "SQLs flat",
+      "Win rate stable at 24%",
+      "Two senior AEs resigned this quarter"
+    ]}
+  ],
+  "hidden_metadata": {
+    "domain": "pe-diligence",
+    "difficulty": "hard",
+    "failure_modes": ["coverage-over-insight", "misattribution", "endorsing-CRO-proposal"],
+    "key_insight": "MQL-to-SQL conversion is broken; top-funnel spend will not fix it"
+  },
+  "tags": ["pe-diligence", "portfolio-ops", "judgment", "sales"],
+  "dataset_split": "dev",
+  "rubric_notes": [
+    "The top of funnel is not the problem — MQLs are up 22% while SQLs are flat.",
+    "The CRO's proposal pours water into a leaking middle of the funnel.",
+    "Two AE departures likely compound the conversion collapse — should be surfaced.",
+    "Penalise responses that hedge by listing multiple possible causes without taking a stance."
+  ],
+  "suite": "Riplo Consulting v1"
+}

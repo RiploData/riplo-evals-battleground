@@ -1,0 +1,34 @@
+{
+  "kind": "judgment",
+  "title": "What is the single most important thing here?",
+  "guidance": "Reward insight and restraint over coverage — the one thing that should change the decision.",
+  "output_spec": {
+    "target": "Board slide",
+    "parts": [
+      { "type": "title", "label": "Slide title", "note": "one line" },
+      { "type": "text", "label": "Lead insight", "note": "1–2 sentences" }
+    ]
+  },
+  "runner_input": {
+    "instruction": "Identify the single most important insight from the data below.",
+    "constraints": "One slide title + 1–2 sentence insight. No bullet lists."
+  },
+  "source_blocks": [
+    { "type": "text", "text": "A portfolio company missed its Q3 revenue target by 6%. The CRO has proposed increasing marketing spend 30%." },
+    { "type": "bullets", "items": [
+      "MQLs up 22% QoQ",
+      "SQLs flat",
+      "Win rate stable at 24%",
+      "Two senior AEs resigned this quarter"
+    ]}
+  ],
+  "hidden_metadata": {
+    "domain": "domain-a",
+    "difficulty": "hard",
+    "failure_modes": ["coverage-over-insight", "misattribution"]
+  },
+  "tags": ["domain-a", "judgment", "fixture"],
+  "dataset_split": "dev",
+  "rubric_notes": ["The key insight is that MQLs are up but SQLs flat — a mid-funnel problem, not a top-funnel one."],
+  "suite": "Fixture Suite v1"
+}

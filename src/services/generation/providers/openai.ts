@@ -27,12 +27,16 @@ export const openAIProvider: GenerationProvider = {
       extraParams.temperature = req.params.temperature;
     }
 
+    const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [];
+    // Omit the system message entirely when empty (vanilla / no-prompt competitors).
+    if (req.system.trim()) {
+      messages.push({ role: 'system', content: req.system });
+    }
+    messages.push({ role: 'user', content: req.user });
+
     const resp = (await client.chat.completions.create({
       model: req.model,
-      messages: [
-        { role: 'system', content: req.system },
-        { role: 'user', content: req.user },
-      ],
+      messages,
       max_completion_tokens: maxCompletionTokens,
       stream: false,
       ...extraParams,

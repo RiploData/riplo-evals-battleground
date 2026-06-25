@@ -26,7 +26,8 @@ export const anthropicProvider: GenerationProvider = {
     const resp = await client.messages.create({
       model: req.model,
       max_tokens: maxTokens,
-      system: req.system,
+      // Omit system entirely when empty (vanilla / no-prompt competitors).
+      ...(req.system.trim() ? { system: req.system } : {}),
       messages: [{ role: 'user', content: req.user }],
       ...extraParams,
     });

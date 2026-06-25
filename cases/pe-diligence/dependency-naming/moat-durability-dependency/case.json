@@ -1,0 +1,44 @@
+{
+  "kind": "dependency-naming",
+  "suite": "Riplo Consulting v1",
+  "dataset_split": "validation",
+  "title": "Name the condition under which 'the moat is durable' flips",
+  "guidance": "Reward a concrete, decision-relevant flip condition. Penalise vagueness.",
+  "output_spec": {
+    "target": "Callout line",
+    "parts": [
+      {
+        "type": "text",
+        "label": "Dependency callout",
+        "note": "one 'this only holds if…' sentence"
+      }
+    ]
+  },
+  "runner_input": {
+    "instruction": "Add the 'this only holds if…' line to the moat argument below.",
+    "constraints": "One sentence. Names a concrete, checkable condition."
+  },
+  "source_blocks": [
+    {
+      "type": "text",
+      "text": "Halden's moat is institutional: 28 years of IFSM endorsement, recognition by BRCGS auditors and EHOs, and 14 QMS integrations that consume the library. An LLM can draft a plausible schedule, but it cannot manufacture that endorsement or auditor acceptance, so the moat is durable against AI."
+    }
+  ],
+  "hidden_metadata": {
+    "domain": "pe-diligence",
+    "difficulty": "medium",
+    "failure_modes": [
+      "vague",
+      "names no real condition",
+      "restates the conclusion"
+    ]
+  },
+  "tags": [
+    "dependency-naming",
+    "moat"
+  ],
+  "rubric_notes": [
+    "Good condition: 'this only holds if the buyer's reason to purchase is audit assurance; if it shifts to merely a high-quality schedule, pricing comes under pressure.'",
+    "Also acceptable: holds only if the QMS integration contracts prevent content reuse and IFSM exclusivity stays unilateral."
+  ]
+}

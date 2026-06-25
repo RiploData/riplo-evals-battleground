@@ -1,0 +1,7 @@
+{
+  "model_provider": "openai",
+  "model_identifier": "gpt-5.5",
+  "prompt_bundle": {},
+  "model_parameters": { "max_tokens": 2048 },
+  "source_type": "manual"
+}

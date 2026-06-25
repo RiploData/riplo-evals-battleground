@@ -1,0 +1,44 @@
+{
+  "kind": "de-slop",
+  "suite": "Riplo Consulting v1",
+  "dataset_split": "dev",
+  "title": "De-slop a market overview heavy on grandiose nouns",
+  "guidance": "Reward concrete market mechanics over grandiose abstractions. Keep all figures.",
+  "output_spec": {
+    "target": "Clean paragraph",
+    "parts": [
+      {
+        "type": "text",
+        "label": "Rewrite",
+        "note": "one paragraph"
+      }
+    ]
+  },
+  "runner_input": {
+    "instruction": "Rewrite, removing 'tapestry/landscape/ecosystem' and empty hedges.",
+    "constraints": "No grandiose nouns. Keep every figure. Replace each abstraction with the specific mechanic."
+  },
+  "source_blocks": [
+    {
+      "type": "text",
+      "text": "The veterinary software space is a vibrant and ever-evolving ecosystem, a rich tapestry of players navigating a complex and dynamic landscape. Within this paradigm, a £271m SAM growing at 9% represents a compelling synergy of tailwinds. It's worth noting that incumbents, while established, have arguably failed to keep pace."
+    }
+  ],
+  "hidden_metadata": {
+    "domain": "market-sizing",
+    "difficulty": "medium",
+    "failure_modes": [
+      "leaves grandiose nouns",
+      "adds filler",
+      "drops the 9% or £271m"
+    ]
+  },
+  "tags": [
+    "de-slop",
+    "market",
+    "word-choice"
+  ],
+  "rubric_notes": [
+    "£271m and 9% must survive. Replace 'ecosystem/tapestry/landscape/paradigm/synergy' with the actual mechanic (on-premise incumbents, switching cost falling)."
+  ]
+}

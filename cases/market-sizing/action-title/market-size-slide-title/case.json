@@ -1,0 +1,42 @@
+{
+  "kind": "action-title",
+  "suite": "Riplo Consulting v1",
+  "dataset_split": "dev",
+  "title": "Title a market-sizing slide with the so-what",
+  "guidance": "Reward a claim about whether the market is big/growing enough to matter. Penalise the label 'Market size'.",
+  "output_spec": {
+    "target": "Slide title",
+    "parts": [
+      {
+        "type": "title",
+        "label": "Title",
+        "note": "a claim"
+      }
+    ]
+  },
+  "runner_input": {
+    "instruction": "Write the slide title as the takeaway of the numbers.",
+    "constraints": "Max 14 words. A claim."
+  },
+  "source_blocks": [
+    {
+      "type": "text",
+      "text": "Chart: SAM £271m, growing 9% YoY; incumbents 60% share but on-premise and low-NPS."
+    }
+  ],
+  "hidden_metadata": {
+    "domain": "market-sizing",
+    "difficulty": "easy",
+    "failure_modes": [
+      "label title",
+      "restates the axis"
+    ]
+  },
+  "tags": [
+    "market-sizing",
+    "action-title"
+  ],
+  "rubric_notes": [
+    "Good title says the market is big and displaceable, e.g. 'A £271m SAM held by stale incumbents is ripe for a cloud challenger.'"
+  ]
+}

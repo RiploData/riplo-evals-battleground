@@ -1,0 +1,45 @@
+{
+  "kind": "comparable",
+  "suite": "Riplo Consulting v1",
+  "dataset_split": "validation",
+  "title": "Find a comparable transaction set to support a multiple",
+  "guidance": "Reward relevant comps with a fit note. Penalise sector-only or cherry-picked comps.",
+  "output_spec": {
+    "target": "Comps panel",
+    "parts": [
+      {
+        "type": "bullets",
+        "label": "Comps",
+        "note": "3 lines: name — multiple — fit"
+      }
+    ]
+  },
+  "runner_input": {
+    "instruction": "Provide 3 comparable transactions supporting the stated exit multiple.",
+    "constraints": "3 comps. State EV/ARR or EV/EBITDA. One-line fit note each (moat type + growth/margin)."
+  },
+  "source_blocks": [
+    {
+      "type": "text",
+      "text": "Halden FY31F plan: £14.2m Adj. EBITDA, 36% margin, 28% CAGR, compliance-anchored vertical SaaS. A claimed ~12x EBITDA / ~9x ARR exit is asserted, lightly justified. Provide a comparable set (synthetic or anonymised) that supports or challenges it, matching on moat type and growth/margin, not just 'software'."
+    }
+  ],
+  "hidden_metadata": {
+    "domain": "pe-diligence",
+    "difficulty": "medium",
+    "failure_modes": [
+      "irrelevant comps",
+      "no fit note",
+      "cherry-picked to confirm"
+    ]
+  },
+  "tags": [
+    "comparable",
+    "valuation",
+    "multiples"
+  ],
+  "rubric_notes": [
+    "Comps must match compliance-moated vertical SaaS at similar Rule-of-40, not generic SaaS.",
+    "A good answer notes whether 12x is top-of-range or mid for that cohort."
+  ]
+}

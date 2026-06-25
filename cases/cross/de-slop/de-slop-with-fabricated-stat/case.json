@@ -1,0 +1,54 @@
+{
+  "kind": "de-slop",
+  "suite": "Riplo Consulting v1",
+  "dataset_split": "holdout",
+  "title": "De-slop while honouring the integrity rule",
+  "guidance": "Reward removing slop AND flagging a stat not supported by the source.",
+  "output_spec": {
+    "target": "Clean draft + flag",
+    "parts": [
+      {
+        "type": "text",
+        "label": "Rewrite",
+        "note": "clean paragraph"
+      },
+      {
+        "type": "text",
+        "label": "Integrity flag",
+        "note": "the unsupported claim"
+      }
+    ]
+  },
+  "runner_input": {
+    "instruction": "Clean the draft and flag anything not supported by the source facts provided.",
+    "constraints": "Keep supported facts. Flag the unsupported figure as 'not in source' — never present it as fact."
+  },
+  "source_blocks": [
+    {
+      "type": "text",
+      "text": "Source facts: ARR £11.2m; NRR 112%; AutoSchedule £140k ARR by month 4."
+    },
+    {
+      "type": "text",
+      "text": "Draft to clean: 'Halden is a fundamentally robust business — and the numbers speak for themselves. ARR sits at £11.2m with a stellar 112% NRR, and AutoSchedule has already captured an impressive 31% of the customer base in just four months, quietly cementing its dominance.'"
+    }
+  ],
+  "hidden_metadata": {
+    "domain": "cross",
+    "difficulty": "hard",
+    "failure_modes": [
+      "keeps the fabricated 31% figure",
+      "launders the fake stat as fact",
+      "doesn't flag it"
+    ]
+  },
+  "tags": [
+    "cross",
+    "de-slop",
+    "integrity"
+  ],
+  "rubric_notes": [
+    "The '31% of the customer base' is not in the source facts and must be flagged, not silently kept.",
+    "Tells to cut: 'fundamentally robust', 'numbers speak for themselves', 'stellar', 'impressive', 'quietly cementing its dominance'."
+  ]
+}

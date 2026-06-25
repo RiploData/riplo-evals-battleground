@@ -1,0 +1,49 @@
+{
+  "kind": "action-title",
+  "suite": "Riplo Consulting v1",
+  "dataset_split": "dev",
+  "title": "Write action titles for a 4-slide offering section",
+  "guidance": "Reward titles that read as a connected story. Penalise labels or disconnected titles.",
+  "output_spec": {
+    "target": "Title set",
+    "parts": [
+      {
+        "type": "bullets",
+        "label": "Titles",
+        "note": "4 connected claim titles"
+      }
+    ]
+  },
+  "runner_input": {
+    "instruction": "Write 4 claim titles for the 4 slide bodies below.",
+    "constraints": "4 titles. Each max 14 words. Read together, they should tell the pitch."
+  },
+  "source_blocks": [
+    {
+      "type": "bullets",
+      "items": [
+        "Slide 1 body: AI is reshaping claims handling; rivals quote 3-day cycles",
+        "Slide 2 body: three use cases — triage, fraud flagging, customer comms",
+        "Slide 3 body: our offering — an auditable agent, live in 8 weeks",
+        "Slide 4 body: roadmap — pilot in 8 weeks, scale to all lines in 6 months"
+      ]
+    }
+  ],
+  "hidden_metadata": {
+    "domain": "offer-factory",
+    "difficulty": "medium",
+    "failure_modes": [
+      "labels",
+      "titles don't connect",
+      "repetition across titles"
+    ]
+  },
+  "tags": [
+    "offer-factory",
+    "action-title",
+    "narrative"
+  ],
+  "rubric_notes": [
+    "Reading the 4 titles alone should deliver the pitch: AI is taking the market -> here are the three highest-value uses -> our agent is auditable and fast -> here's the path to scale."
+  ]
+}

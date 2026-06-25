@@ -1,0 +1,49 @@
+{
+  "kind": "register-switch",
+  "suite": "Riplo Consulting v1",
+  "dataset_split": "dev",
+  "title": "Tighten verbose offering bullets to one line each",
+  "guidance": "Reward maximal cut with meaning intact.",
+  "output_spec": {
+    "target": "Tight bullets",
+    "parts": [
+      {
+        "type": "bullets",
+        "label": "Bullets",
+        "note": "5 one-line bullets"
+      }
+    ]
+  },
+  "runner_input": {
+    "instruction": "Rewrite each long bullet as one tight line carrying one verb and one object.",
+    "constraints": "Max 10 words per bullet."
+  },
+  "source_blocks": [
+    {
+      "type": "bullets",
+      "items": [
+        "We will work collaboratively with your team to deeply understand the existing claims process and all of its many nuances",
+        "Our platform is able to leverage a robust and comprehensive set of integrations with your existing systems of record",
+        "We provide a fully auditable trail so that every single decision made by the agent can be inspected and reviewed",
+        "We aim to deliver an initial pilot within a timeframe of approximately eight weeks from project kick-off",
+        "We offer ongoing support and continuous improvement to ensure the solution keeps delivering value over time"
+      ]
+    }
+  ],
+  "hidden_metadata": {
+    "domain": "offer-factory",
+    "difficulty": "easy",
+    "failure_modes": [
+      "still long",
+      "keeps hedges",
+      "loses the object"
+    ]
+  },
+  "tags": [
+    "offer-factory",
+    "register-switch"
+  ],
+  "rubric_notes": [
+    "E.g. 'Map your claims process in week one.' / 'Integrate with your systems of record.' / 'Every agent decision is auditable.' / 'Pilot live in 8 weeks.' / 'Ongoing tuning post-launch.'"
+  ]
+}

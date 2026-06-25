@@ -1,0 +1,97 @@
+{
+  "kind": "compression",
+  "suite": "Riplo Consulting v1",
+  "dataset_split": "dev",
+  "title": "Compress this AI diligence storyline to its IC one-pager",
+  "guidance": "Reward the version that helps a partner reach a buy/no-buy call. Penalise a version that summarises every section without a verdict or a foregrounded risk.",
+  "output_spec": {
+    "target": "IC one-pager",
+    "parts": [
+      {
+        "type": "title",
+        "label": "Verdict headline",
+        "note": "one line, states the call"
+      },
+      {
+        "type": "bullets",
+        "label": "Supporting points",
+        "note": "3 bullets"
+      },
+      {
+        "type": "text",
+        "label": "Our view",
+        "note": "one calibrated line"
+      }
+    ]
+  },
+  "runner_input": {
+    "instruction": "Compress the storyline below into an IC one-pager: lead with the answer, then the few things that change the decision.",
+    "constraints": "Max 160 words. Title states the verdict. Foreground the one risk that could change the buy view. No new facts."
+  },
+  "source_blocks": [
+    {
+      "type": "text",
+      "text": "Project Saffron — Halden Standards Ltd owns the Halden Code, the de-facto UK standard for food-safety management schedules (cleaning, temperature, allergen and pest-control regimes), used by food manufacturers, hospitality groups and contract caterers. Aldgate Capital is considering a buyout. All figures synthetic."
+    },
+    {
+      "type": "text",
+      "text": "Overall view: AI is a net positive. The moat is institutional, no funded challenger is attacking, and three AI levers compound the case. Underwrite a buy, gated on two diligence items — integration-contract content-control terms (defensive) and ML capability/roadmap ownership (offensive)."
+    },
+    {
+      "type": "bullets",
+      "items": [
+        "FY26A: ARR £11.2m; recurring billings £11.6m; total revenue £10.4m; gross margin 88%; Adj. EBITDA £3.1m (30%); FCF £2.4m",
+        "HaldenOS platform on 48% of ~900 clients, up from 22% a year ago; 18% ARR uplift on migrations",
+        "NRR 112%; GRR 91%; NPS +58; voluntary attrition 6.1%; blended ACV ~£12k",
+        "FY31F plan: recurring billings £39.5m (~3.4x; 28% CAGR); Adj. EBITDA £14.2m (36%)",
+        "Above-plan upside (CIM): migration 30% not 18% (+£1.4m EBITDA); pricing 8% not 4% (+£4.9m); churn 5% not 9% (+£2.6m)"
+      ]
+    },
+    {
+      "type": "bullets",
+      "items": [
+        "1,180 ratified schedules across 90 process types; endorsed by the Institute of Food Safety Management (IFSM) with a 12-year exclusivity",
+        "Named in BRCGS audit guidance and contract-catering tenders; embedded in 14 QMS-software integrations",
+        "Buyers: food manufacturers 38% of ARR, hospitality & contract caterers 34%, retail & convenience 16%, other 12%",
+        "Why they buy: BRCGS/EHO audit assurance, allergen-liability protection under Natasha's Law, operational efficiency"
+      ]
+    },
+    {
+      "type": "bullets",
+      "items": [
+        "AutoSchedule (AI asset/process-to-schedule mapping) shipped Jan 2026; £140k ARR by month 4; 88–95% accuracy on a 12,000-SKU test",
+        "Proprietary AI authoring tool used by the 8-FTE food-safety author team; an analytics module was pulled forward",
+        "Opportunity levers: 40–55% authorship efficiency; a compliance-scoring layer at 2–3x ARPU; an SME tier for ~120,000 small food businesses priced out today"
+      ]
+    },
+    {
+      "type": "text",
+      "text": "The one credible AI-enabled disruption path is a QMS/food-safety software vendor (e.g. SafePlate, Kitchen Sentinel, Comply&Co) using LLMs to generate a competing schedule library, routing around the integration dependency, and bidding for trade-body and auditor recognition — five sequential steps over 5–8 years. Customer DIY fails at the auditor gate (needs a citable, ratified source) and the allergen-liability gate (Natasha's Law is criminally enforced)."
+    },
+    {
+      "type": "text",
+      "text": "CTO Daniel Mertens is praised across primary interviews and the team has shipped real AI, but the CIM org chart names 11 developers, 1 DevOps, 2 product and 3 QA across an 18-FTE engineering team — and no ML or data engineer. AutoSchedule's accuracy implies real ML plumbing exists; whether it is built in-house, rented from a vendor, or contractor-delivered is unknown."
+    }
+  ],
+  "hidden_metadata": {
+    "domain": "pe-diligence",
+    "difficulty": "medium",
+    "failure_modes": [
+      "over-recall",
+      "no verdict in the title",
+      "buries the capability risk",
+      "exceeds word cap"
+    ]
+  },
+  "tags": [
+    "pe-diligence",
+    "due-diligence",
+    "compression",
+    "one-pager"
+  ],
+  "rubric_notes": [
+    "The verdict is: buy, gated on integration-contract terms and ML capability.",
+    "Must foreground the capability gap (no named ML engineer) as the risk that sizes the upside.",
+    "Penalise versions that lead with company history or list all four lenses evenly."
+  ]
+}

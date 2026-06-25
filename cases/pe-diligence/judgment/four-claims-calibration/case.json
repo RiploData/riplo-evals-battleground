@@ -1,0 +1,49 @@
+{
+  "kind": "judgment",
+  "suite": "Riplo Consulting v1",
+  "dataset_split": "dev",
+  "title": "Assign confidence to four claims and justify the calibration",
+  "guidance": "Reward calibration that varies with evidence strength. Penalise blanket 'likely'.",
+  "output_spec": {
+    "target": "Calibration table",
+    "parts": [
+      {
+        "type": "bullets",
+        "label": "Ratings",
+        "note": "4 lines: claim — rating — one-line why"
+      }
+    ]
+  },
+  "runner_input": {
+    "instruction": "Rate each claim High/Med/Low and justify in one line.",
+    "constraints": "4 ratings. Vary the language. The thin and contested claims must not read as confident."
+  },
+  "source_blocks": [
+    {
+      "type": "bullets",
+      "items": [
+        "Claim A: The moat is institutional and irreplicable. Evidence: 28-yr IFSM endorsement, BRCGS/EHO recognition, 14 integrations (strong, triangulated).",
+        "Claim B: No funded UK food-safety-standards startup exists. Evidence: Crunchbase/Pitchbook search, May 2026 (strong but point-in-time).",
+        "Claim C: AutoSchedule cross-sell will hit plan. Evidence: 4 months of data, £140k (thin).",
+        "Claim D: QMS-vendor sideways entry is unlikely. Evidence: vendor incentives + no stated intent, but integration-contract terms unverified (contested)."
+      ]
+    }
+  ],
+  "hidden_metadata": {
+    "domain": "pe-diligence",
+    "difficulty": "medium",
+    "failure_modes": [
+      "all 'likely'",
+      "uncalibrated",
+      "treats the thin claim as confident"
+    ]
+  },
+  "tags": [
+    "judgment",
+    "calibration"
+  ],
+  "rubric_notes": [
+    "A=High, B=High (with point-in-time caveat), C=Low (4 months), D=Medium (contingent on contract terms).",
+    "Reject any answer that rates C or D High."
+  ]
+}

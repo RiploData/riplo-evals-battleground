@@ -291,14 +291,26 @@ export default function BattleClient() {
         .tt-wrap .ProseMirror p.is-editor-empty:first-child::before { content: 'Write your version…'; color: ${t.inkFaint}; float: left; height: 0; pointer-events: none; }
         .reveal { animation: fade .2s ease both; }
         @keyframes fade { from{opacity:0;transform:translateY(4px);} to{opacity:1;transform:none;} }
-        @media (max-width: 880px){ .panes{ grid-template-columns:1fr !important; height:auto !important; }
-          .pane{ height:auto !important; max-height:none !important; } }
+        @media (max-width: 880px){
+          .arena{ padding: 0 16px !important; }
+          .topbar{ flex-wrap: wrap; gap: 8px 14px; }
+          .panes{ grid-template-columns:1fr !important; height:auto !important; min-height:0 !important; gap:16px !important; }
+          .pane{ height:auto !important; max-height:none !important; }
+          /* natural document flow — drop the nested inner-scroll regions on touch */
+          .arena .scroll{ overflow:visible !important; flex:0 0 auto !important; min-height:0 !important; }
+          .opt{ flex:0 0 auto !important; }
+          /* no physical keyboard → hide the shortcut chips and the hint row */
+          .kbd{ display:none !important; }
+          .kbdhint{ display:none !important; }
+          /* give the rewrite editor a usable height once it's in natural flow */
+          .tt-content{ min-height:50vh !important; }
+        }
         @media (prefers-reduced-motion: reduce){ .reveal{animation:none;} .opt{transition:none;} }
       `}</style>
 
       <div className="arena" style={{ maxWidth: 1180, margin: '0 auto', padding: '0 22px' }}>
         {/* ── Header ── */}
-        <header style={{
+        <header className="topbar" style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '16px 0 14px', borderBottom: `1px solid ${t.line}`,
         }}>
@@ -478,7 +490,7 @@ export default function BattleClient() {
                         >
                           <PenLine size={14} /> Neither — rewrite <span className="kbd">R</span>
                         </button>
-                        <div style={{ marginTop: 12, textAlign: 'center', fontSize: 11.5, color: t.inkFaint }}>
+                        <div className="kbdhint" style={{ marginTop: 12, textAlign: 'center', fontSize: 11.5, color: t.inkFaint }}>
                           <span className="kbd">A</span> · <span className="kbd">B</span> · <span className="kbd">T</span> tie · <span className="kbd">R</span> rewrite
                         </div>
                       </>

@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { describe, it, expect, afterAll } from 'vitest';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { db, pool } from '@/db/client';
 import {
   suites,
@@ -13,7 +13,7 @@ import {
   generationAttempts,
   responses,
 } from '@/db/schema';
-import { enqueueGeneration, generationStatus } from '@/services/generate-batch';
+import { enqueueGeneration, generationStatus, enqueueMissingForCampaign } from '@/services/generate-batch';
 import type { GenerationProvider, ProviderResult } from '@/services/generation/provider';
 import type { SessionUser } from '@/auth/workos';
 
@@ -336,5 +336,57 @@ describe('generate-batch service integration', () => {
     // generationStatus still reports the original succeeded count
     const status = await generationStatus(campaignId);
     expect(status['succeeded']).toBe(attemptCountBefore);
+  });
+
+  it('enqueueMissingForCampaign fills only missing cells and is idempotent', async () => {
+    const { suiteId, suiteVersionId } = await seedSuiteAndVersion('missing-04');
+    const caseVersionId1 = await seedCaseVersion(suiteId, 'missing-04-c1');
+    const caseVersionId2 = await seedCaseVersion(suiteId, 'missing-04-c2');
+    const compVersionId1 = await seedCompetitorVersion('missing-04-v1');
+    const compVersionId2 = await seedCompetitorVersion('missing-04-v2');
+
+    // Campaign with replicates=1
+    const [camp] = await db
+      .insert(campaigns)
+      .values({
+        name: 'Missing Campaign 04',
+        suiteVersionId,
+        eligibleCompetitorVersionIds: [compVersionId1, compVersionId2],
+        replicates: 1,
+      })
+      .returning({ id: campaigns.id });
+    createdCampaignIds.push(camp.id);
+
+    // First run — all 4 cells are missing
+    const r1 = await enqueueMissingForCampaign(operatorUser, camp.id, fakeProvider);
+
+    expect(r1.total).toBe(4);
+    expect(r1.generated).toBe(4);
+    expect(r1.skipped).toBe(0);
+    expect(r1.failed).toBe(0);
+
+    // Track cleanup
+    const attemptsAfter = await db
+      .select({ id: generationAttempts.id })
+      .from(generationAttempts)
+      .where(eq(generationAttempts.campaignId, camp.id));
+    for (const a of attemptsAfter) {
+      if (!createdAttemptIds.includes(a.id)) createdAttemptIds.push(a.id);
+    }
+    const responsesAfter = await db
+      .select({ id: responses.id })
+      .from(responses)
+      .where(inArray(responses.caseVersionId, [caseVersionId1, caseVersionId2]));
+    for (const r of responsesAfter) {
+      if (!createdResponseIds.includes(r.id)) createdResponseIds.push(r.id);
+    }
+
+    // Second run — all 4 cells are already cached → all skipped
+    const r2 = await enqueueMissingForCampaign(operatorUser, camp.id, fakeProvider);
+
+    expect(r2.total).toBe(4);
+    expect(r2.generated).toBe(0);
+    expect(r2.skipped).toBe(4);
+    expect(r2.failed).toBe(0);
   });
 });

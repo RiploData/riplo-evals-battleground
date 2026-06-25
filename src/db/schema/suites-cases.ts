@@ -7,6 +7,7 @@ import {
   jsonb,
   doublePrecision,
   unique,
+  boolean,
 } from 'drizzle-orm/pg-core';
 import { users } from './identity';
 
@@ -41,6 +42,8 @@ export const cases = pgTable('cases', {
     .notNull()
     .references(() => suites.id),
   externalRef: text('external_ref'),
+  retiredAt: timestamp('retired_at', { withTimezone: true }),
+  eligibleOverride: boolean('eligible_override'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 

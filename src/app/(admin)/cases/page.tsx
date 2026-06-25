@@ -1,6 +1,7 @@
 import { requireUser, requireRole } from '@/auth/workos';
-import { listCases } from '@/services/export';
+import { listCasesWithEligibility } from '@/services/admin';
 import { t, sans, mono } from '@/ui/tokens';
+import CaseEligibilityControl from './CaseEligibilityControl';
 
 export default async function CasesPage() {
   const user = await requireUser();
@@ -15,7 +16,7 @@ export default async function CasesPage() {
     );
   }
 
-  const cases = await listCases();
+  const cases = await listCasesWithEligibility();
 
   return (
     <div>
@@ -38,7 +39,7 @@ export default async function CasesPage() {
             fontFamily: sans,
           }}
         >
-          {cases.length} case versions
+          {cases.length} cases
         </span>
       </div>
 
@@ -59,30 +60,32 @@ export default async function CasesPage() {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
                 <tr style={{ borderBottom: `1px solid ${t.line}`, backgroundColor: t.lineSoft }}>
-                  {['External ref', 'Kind', 'Title', 'Tags', 'Split'].map((col) => (
-                    <th
-                      key={col}
-                      style={{
-                        padding: '10px 14px',
-                        textAlign: 'left' as const,
-                        fontSize: 11,
-                        fontWeight: 600,
-                        letterSpacing: '0.06em',
-                        textTransform: 'uppercase' as const,
-                        color: t.inkFaint,
-                        fontFamily: sans,
-                        whiteSpace: 'nowrap' as const,
-                      }}
-                    >
-                      {col}
-                    </th>
-                  ))}
+                  {['External ref', 'Kind', 'Title', 'Split', 'In-git', 'Default', 'Effective', 'Override'].map(
+                    (col) => (
+                      <th
+                        key={col}
+                        style={{
+                          padding: '10px 14px',
+                          textAlign: 'left' as const,
+                          fontSize: 11,
+                          fontWeight: 600,
+                          letterSpacing: '0.06em',
+                          textTransform: 'uppercase' as const,
+                          color: t.inkFaint,
+                          fontFamily: sans,
+                          whiteSpace: 'nowrap' as const,
+                        }}
+                      >
+                        {col}
+                      </th>
+                    ),
+                  )}
                 </tr>
               </thead>
               <tbody>
                 {cases.map((c, i) => (
                   <tr
-                    key={c.case_version_id}
+                    key={c.caseId}
                     style={{
                       borderBottom: i < cases.length - 1 ? `1px solid ${t.lineSoft}` : 'none',
                       backgroundColor: i % 2 === 0 ? t.card : '#FAFAF8',
@@ -97,7 +100,7 @@ export default async function CasesPage() {
                         whiteSpace: 'nowrap' as const,
                       }}
                     >
-                      {c.external_ref ?? '—'}
+                      {c.externalRef ?? '—'}
                     </td>
                     <td
                       style={{
@@ -116,34 +119,10 @@ export default async function CasesPage() {
                         fontFamily: sans,
                         fontSize: 13,
                         color: t.ink,
-                        maxWidth: 400,
+                        maxWidth: 320,
                       }}
                     >
                       {c.title}
-                    </td>
-                    <td style={{ padding: '10px 14px' }}>
-                      {c.tags.length === 0 ? (
-                        <span style={{ color: t.inkFaint, fontSize: 12, fontFamily: sans }}>—</span>
-                      ) : (
-                        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' as const }}>
-                          {c.tags.map((tag) => (
-                            <span
-                              key={tag}
-                              style={{
-                                padding: '2px 8px',
-                                borderRadius: 4,
-                                backgroundColor: t.accentSoft,
-                                color: t.accent,
-                                fontSize: 11,
-                                fontFamily: sans,
-                                fontWeight: 600,
-                              }}
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      )}
                     </td>
                     <td
                       style={{
@@ -153,7 +132,55 @@ export default async function CasesPage() {
                         color: t.inkSoft,
                       }}
                     >
-                      {c.dataset_split}
+                      {c.datasetSplit}
+                    </td>
+                    <td style={{ padding: '10px 14px' }}>
+                      <span
+                        style={{
+                          padding: '2px 8px',
+                          borderRadius: 4,
+                          fontSize: 11,
+                          fontFamily: sans,
+                          fontWeight: 600,
+                          backgroundColor: c.retiredAt ? '#fef2f2' : t.accentSoft,
+                          color: c.retiredAt ? '#b91c1c' : t.accent,
+                        }}
+                      >
+                        {c.retiredAt ? 'removed' : 'present'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '10px 14px' }}>
+                      <span
+                        style={{
+                          padding: '2px 8px',
+                          borderRadius: 4,
+                          fontSize: 11,
+                          fontFamily: sans,
+                          fontWeight: 600,
+                          backgroundColor: c.defaultEligible ? t.accentSoft : t.lineSoft,
+                          color: c.defaultEligible ? t.accent : t.inkFaint,
+                        }}
+                      >
+                        {c.defaultEligible ? 'yes' : 'no'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '10px 14px' }}>
+                      <span
+                        style={{
+                          padding: '2px 8px',
+                          borderRadius: 4,
+                          fontSize: 11,
+                          fontFamily: sans,
+                          fontWeight: 600,
+                          backgroundColor: c.effectiveEligible ? t.accentSoft : t.lineSoft,
+                          color: c.effectiveEligible ? t.accent : t.inkFaint,
+                        }}
+                      >
+                        {c.effectiveEligible ? 'yes' : 'no'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '10px 14px' }}>
+                      <CaseEligibilityControl caseId={c.caseId} current={c.eligibleOverride} />
                     </td>
                   </tr>
                 ))}

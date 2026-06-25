@@ -6,6 +6,7 @@ import {
   jsonb,
   integer,
   unique,
+  boolean,
   type AnyPgColumn,
 } from 'drizzle-orm/pg-core';
 import { users } from './identity';
@@ -14,6 +15,7 @@ export const competitors = pgTable('competitors', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull(),
   competitorType: text('competitor_type').notNull(),
+  enabled: boolean('enabled').notNull().default(true),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 

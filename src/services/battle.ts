@@ -5,6 +5,8 @@ import {
   suiteVersions,
   caseVersions,
   cases,
+  competitors,
+  competitorVersions,
   responses,
   comparisons,
   assignments,
@@ -12,6 +14,7 @@ import {
 import { selectPair, pairKey } from '@/domain/matchmaking';
 import { ensureResponse } from '@/services/generation/runner';
 import { toBlindedOptions } from '@/domain/blinding';
+import { isCaseEligible } from '@/domain/eligibility';
 import type { SessionUser } from '@/auth/workos';
 import type { BattlePayload, BattleTask, OutputSpec, SourceBlock } from '@/types/contracts';
 import type { GenerationProvider } from '@/services/generation/provider';
@@ -29,6 +32,10 @@ export interface GetNextBattleOpts {
  * Returns null when every eligible pair has already been seen by this user.
  *
  * Injectable `provider` and `rng` make the function deterministic in tests.
+ *
+ * Eligibility: only cases where isCaseEligible({ retiredAt, eligibleOverride, latestSplit })
+ * are considered. Only competitor versions whose competitor is enabled AND status='active'
+ * are included.
  */
 export async function getNextBattle(
   user: SessionUser,
@@ -50,14 +57,33 @@ export async function getNextBattle(
   }
 
   const campaign = activeCampaigns[0];
-  const eligibleCompetitorVersionIds = campaign.eligibleCompetitorVersionIds as string[];
+  const rawEligibleCompetitorVersionIds = campaign.eligibleCompetitorVersionIds as string[];
+
+  if (rawEligibleCompetitorVersionIds.length < 2) {
+    return null;
+  }
+
+  // 2. Filter eligibleCompetitorVersionIds to those whose competitor is enabled
+  //    AND competitorVersion.status = 'active'.
+  const enabledCvRows = await db
+    .select({ id: competitorVersions.id })
+    .from(competitorVersions)
+    .innerJoin(competitors, eq(competitors.id, competitorVersions.competitorId))
+    .where(
+      and(
+        inArray(competitorVersions.id, rawEligibleCompetitorVersionIds),
+        eq(competitors.enabled, true),
+        eq(competitorVersions.status, 'active'),
+      ),
+    );
+
+  const eligibleCompetitorVersionIds = enabledCvRows.map(r => r.id);
 
   if (eligibleCompetitorVersionIds.length < 2) {
     return null;
   }
 
-  // 2. Load eligible cases from the campaign's suite version.
-  // campaign.suiteVersionId references suite_versions.id; resolve to the parent suiteId first.
+  // 3. Resolve suite → cases → latest version per case → filter by isCaseEligible.
   const [sv] = await db
     .select({ suiteId: suiteVersions.suiteId })
     .from(suiteVersions)
@@ -68,9 +94,27 @@ export async function getNextBattle(
     return null;
   }
 
-  const finalCaseVersions = await db
+  // Load all cases in the suite with their eligibility fields
+  const allCases = await db
+    .select({
+      id: cases.id,
+      retiredAt: cases.retiredAt,
+      eligibleOverride: cases.eligibleOverride,
+    })
+    .from(cases)
+    .where(eq(cases.suiteId, sv.suiteId));
+
+  if (allCases.length === 0) {
+    return null;
+  }
+
+  // Load all case versions for these cases
+  const caseIds = allCases.map(c => c.id);
+  const allCaseVersionRows = await db
     .select({
       id: caseVersions.id,
+      caseId: caseVersions.caseId,
+      version: caseVersions.version,
       tags: caseVersions.tags,
       kind: caseVersions.kind,
       title: caseVersions.title,
@@ -78,17 +122,40 @@ export async function getNextBattle(
       outputSpecJson: caseVersions.outputSpecJson,
       evaluatorContextJson: caseVersions.evaluatorContextJson,
       sourceBlocksJson: caseVersions.sourceBlocksJson,
-      caseId: caseVersions.caseId,
+      datasetSplit: caseVersions.datasetSplit,
     })
     .from(caseVersions)
-    .innerJoin(cases, eq(cases.id, caseVersions.caseId))
-    .where(eq(cases.suiteId, sv.suiteId));
+    .where(inArray(caseVersions.caseId, caseIds));
+
+  // Find the latest version per case
+  const latestVersionByCaseId = new Map<string, (typeof allCaseVersionRows)[0]>();
+  for (const cv of allCaseVersionRows) {
+    const existing = latestVersionByCaseId.get(cv.caseId);
+    if (!existing || cv.version > existing.version) {
+      latestVersionByCaseId.set(cv.caseId, cv);
+    }
+  }
+
+  // Filter to eligible cases
+  const finalCaseVersions = allCases
+    .map(c => {
+      const latestCv = latestVersionByCaseId.get(c.id);
+      if (!latestCv) return null;
+      const eligible = isCaseEligible({
+        retiredAt: c.retiredAt,
+        eligibleOverride: c.eligibleOverride,
+        latestSplit: latestCv.datasetSplit,
+      });
+      if (!eligible) return null;
+      return latestCv;
+    })
+    .filter((cv): cv is NonNullable<(typeof allCaseVersionRows)[0]> => cv !== null);
 
   if (finalCaseVersions.length === 0) {
     return null;
   }
 
-  // 3. Build existingPairCounts from comparisons.
+  // 4. Build existingPairCounts from comparisons.
   const existingComparisons = await db
     .select({
       responseOneId: comparisons.responseOneId,
@@ -124,7 +191,7 @@ export async function getNextBattle(
     }
   }
 
-  // 4. Build seenByUser: pairs already assigned to this user.
+  // 5. Build seenByUser: pairs already assigned to this user.
   const userAssignments = await db
     .select({
       leftResponseId: assignments.leftResponseId,
@@ -160,7 +227,7 @@ export async function getNextBattle(
     }
   }
 
-  // 5. Select a pair.
+  // 6. Select a pair.
   const pair = selectPair({
     cases: finalCaseVersions.map(cv => ({ caseVersionId: cv.id, tags: cv.tags as string[] })),
     eligibleCompetitorVersionIds,
@@ -173,13 +240,13 @@ export async function getNextBattle(
     return null;
   }
 
-  // 6. Ensure responses exist for both cells.
+  // 7. Ensure responses exist for both cells.
   const [respA, respB] = await Promise.all([
     ensureResponse(pair.caseVersionId, pair.competitorA, 0, campaign.id, provider),
     ensureResponse(pair.caseVersionId, pair.competitorB, 0, campaign.id, provider),
   ]);
 
-  // 7. Fetch the response rows (for blinding).
+  // 8. Fetch the response rows (for blinding).
   const [responseRowA, responseRowB] = await Promise.all([
     db.select().from(responses).where(eq(responses.id, respA.responseId)).limit(1),
     db.select().from(responses).where(eq(responses.id, respB.responseId)).limit(1),
@@ -189,7 +256,7 @@ export async function getNextBattle(
     throw new Error('Response rows missing after ensureResponse');
   }
 
-  // 8. Create a comparison row.
+  // 9. Create a comparison row.
   const [comparison] = await db
     .insert(comparisons)
     .values({
@@ -201,12 +268,12 @@ export async function getNextBattle(
     })
     .returning({ id: comparisons.id });
 
-  // 9. Randomly choose left/right order, server-recorded.
+  // 10. Randomly choose left/right order, server-recorded.
   const flip = rng() < 0.5;
   const leftResponse = flip ? responseRowB[0] : responseRowA[0];
   const rightResponse = flip ? responseRowA[0] : responseRowB[0];
 
-  // 10. Create an assignment.
+  // 11. Create an assignment.
   const [assignment] = await db
     .insert(assignments)
     .values({
@@ -218,7 +285,7 @@ export async function getNextBattle(
     })
     .returning({ id: assignments.id });
 
-  // 11. Build the blinded payload.
+  // 12. Build the blinded payload.
   const options = toBlindedOptions(
     {
       id: leftResponse.id,
@@ -232,7 +299,7 @@ export async function getNextBattle(
     },
   );
 
-  // 12. Build the task from the case version's evaluator_context_json.
+  // 13. Build the task from the case version's evaluator_context_json.
   const caseVersion = finalCaseVersions.find(cv => cv.id === pair.caseVersionId)!;
   const caseRow = await db
     .select({ externalRef: cases.externalRef })

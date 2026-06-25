@@ -5,6 +5,7 @@ import { requireUser, requireRole } from '@/auth/workos';
 import { generationStatus } from '@/services/generate-batch';
 import { t, sans, mono } from '@/ui/tokens';
 import GenerateButton from './GenerateButton';
+import GenerateMissingButton from './GenerateMissingButton';
 
 export default async function GeneratePage() {
   const user = await requireUser();
@@ -101,6 +102,41 @@ export default async function GeneratePage() {
             caseVersionIds={allCaseVersionIds}
             competitorVersionIds={eligibleCvIds}
           />
+        ) : (
+          <span style={{ fontSize: 13, color: t.inkFaint, fontFamily: sans }}>
+            No campaign available.
+          </span>
+        )}
+      </div>
+
+      {/* Generate missing (eligibility-aware) */}
+      <div
+        style={{
+          backgroundColor: t.card,
+          border: `1px solid ${t.line}`,
+          borderRadius: 8,
+          padding: 24,
+          marginBottom: 28,
+        }}
+      >
+        <h2
+          style={{
+            margin: '0 0 6px',
+            fontSize: 15,
+            fontWeight: 700,
+            color: t.ink,
+            fontFamily: sans,
+          }}
+        >
+          Generate missing (eligibility-aware)
+        </h2>
+        <p style={{ margin: '0 0 16px', fontSize: 13, color: t.inkSoft, fontFamily: sans }}>
+          Resolves eligible cases × enabled competitors from campaign config. Only generates truly
+          missing cells — already-cached cells are skipped. Returns generated / skipped / failed
+          counts.
+        </p>
+        {defaultCampaign ? (
+          <GenerateMissingButton campaignId={defaultCampaign.id} />
         ) : (
           <span style={{ fontSize: 13, color: t.inkFaint, fontFamily: sans }}>
             No campaign available.

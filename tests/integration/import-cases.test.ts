@@ -208,3 +208,79 @@ describe('importCases', () => {
     }
   });
 });
+
+describe('importCases reconciliation', () => {
+  it('retires a case when its file is removed, then unretires when restored', async () => {
+    const tmpSuiteName = `Reconcile Suite - ${randomUUID().slice(0, 8)}`;
+    const tmpRoot = join(tmpdir(), `arena-reconcile-${randomUUID().slice(0, 8)}`);
+
+    const caseADir = join(tmpRoot, 'reconcile-a', 'case-one');
+    const caseBDir = join(tmpRoot, 'reconcile-b', 'case-two');
+    mkdirSync(caseADir, { recursive: true });
+    mkdirSync(caseBDir, { recursive: true });
+
+    const baseCase = (variant: string) => ({
+      kind: 'compression',
+      title: `Reconcile case ${variant}`,
+      output_spec: {
+        target: 'IC one-pager',
+        parts: [{ type: 'title', label: 'Headline', note: 'one line' }],
+      },
+      runner_input: { instruction: 'Compress this.' },
+      source_blocks: [{ type: 'text', text: `Source ${variant}` }],
+      hidden_metadata: {},
+      tags: [],
+      dataset_split: 'dev',
+      suite: tmpSuiteName,
+    });
+
+    writeFileSync(join(caseADir, 'case.json'), JSON.stringify(baseCase('A')));
+    writeFileSync(join(caseBDir, 'case.json'), JSON.stringify(baseCase('B')));
+
+    try {
+      // Initial import — both cases created, none retired
+      const r1 = await importCases(tmpRoot);
+      expect(r1.created).toBe(2);
+      expect(r1.retired).toBe(0);
+      expect(r1.unretired).toBe(0);
+
+      // Find case B's id
+      const suite = await db.query.suites.findFirst({ where: eq(suites.name, tmpSuiteName) });
+      expect(suite).toBeTruthy();
+      const allCases = await db.query.cases.findMany({ where: eq(cases.suiteId, suite!.id) });
+      expect(allCases).toHaveLength(2);
+      const caseB = allCases.find(c => c.externalRef?.includes('reconcile-b'));
+      expect(caseB).toBeTruthy();
+
+      // Remove case B's file
+      const { unlinkSync } = await import('node:fs');
+      unlinkSync(join(caseBDir, 'case.json'));
+
+      // Re-import without case B — it should be retired
+      const r2 = await importCases(tmpRoot);
+      expect(r2.created).toBe(0);
+      expect(r2.unchanged).toBe(1);
+      expect(r2.retired).toBe(1);
+      expect(r2.unretired).toBe(0);
+
+      // Verify case B is now retired
+      const caseBAfterRetire = await db.query.cases.findFirst({ where: eq(cases.id, caseB!.id) });
+      expect(caseBAfterRetire!.retiredAt).not.toBeNull();
+
+      // Restore case B
+      mkdirSync(caseBDir, { recursive: true });
+      writeFileSync(join(caseBDir, 'case.json'), JSON.stringify(baseCase('B')));
+
+      // Re-import — case B should be unretired
+      const r3 = await importCases(tmpRoot);
+      expect(r3.unretired).toBe(1);
+      expect(r3.retired).toBe(0);
+
+      // Verify case B retired_at is null again
+      const caseBAfterUnretire = await db.query.cases.findFirst({ where: eq(cases.id, caseB!.id) });
+      expect(caseBAfterUnretire!.retiredAt).toBeNull();
+    } finally {
+      await cleanupFixtureSuite(tmpSuiteName);
+    }
+  });
+});

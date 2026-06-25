@@ -15,6 +15,13 @@
       "when": 1782333932259,
       "tag": "0001_even_tag",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1782346694064,
+      "tag": "0002_loving_daimon_hellstrom",
+      "breakpoints": true
     }
   ]
 }

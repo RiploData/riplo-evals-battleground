@@ -1,6 +1,7 @@
 import { requireUser, requireRole } from '@/auth/workos';
-import { listCompetitorVersions } from '@/services/export';
+import { listCompetitorsWithStatus } from '@/services/admin';
 import { t, sans, mono } from '@/ui/tokens';
+import CompetitorToggle from './CompetitorToggle';
 
 export default async function CompetitorsPage() {
   const user = await requireUser();
@@ -15,12 +16,7 @@ export default async function CompetitorsPage() {
     );
   }
 
-  const versions = await listCompetitorVersions();
-
-  // Build a map from competitor_version_id → name for parent lineage display
-  const idToName = new Map(
-    versions.map((v) => [v.competitor_version_id, `${v.name} v${v.version}`]),
-  );
+  const competitors = await listCompetitorsWithStatus();
 
   return (
     <div>
@@ -37,7 +33,7 @@ export default async function CompetitorsPage() {
           Competitors
         </h1>
         <span style={{ fontSize: 13, color: t.inkFaint, fontFamily: sans }}>
-          {versions.length} versions
+          {competitors.length} competitors
         </span>
       </div>
 
@@ -49,16 +45,16 @@ export default async function CompetitorsPage() {
           overflow: 'hidden',
         }}
       >
-        {versions.length === 0 ? (
+        {competitors.length === 0 ? (
           <div style={{ padding: 32, textAlign: 'center', color: t.inkFaint, fontFamily: sans, fontSize: 14 }}>
-            No competitor versions found.
+            No competitors found.
           </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
                 <tr style={{ borderBottom: `1px solid ${t.line}`, backgroundColor: t.lineSoft }}>
-                  {['Name', 'Version', 'Model identifier', 'Source type', 'Parent'].map((col) => (
+                  {['Name', 'Versions', 'Latest model', 'Enabled'].map((col) => (
                     <th
                       key={col}
                       style={{
@@ -79,11 +75,11 @@ export default async function CompetitorsPage() {
                 </tr>
               </thead>
               <tbody>
-                {versions.map((cv, i) => (
+                {competitors.map((comp, i) => (
                   <tr
-                    key={cv.competitor_version_id}
+                    key={comp.competitorId}
                     style={{
-                      borderBottom: i < versions.length - 1 ? `1px solid ${t.lineSoft}` : 'none',
+                      borderBottom: i < competitors.length - 1 ? `1px solid ${t.lineSoft}` : 'none',
                       backgroundColor: i % 2 === 0 ? t.card : '#FAFAF8',
                     }}
                   >
@@ -96,7 +92,7 @@ export default async function CompetitorsPage() {
                         color: t.ink,
                       }}
                     >
-                      {cv.name}
+                      {comp.name}
                     </td>
                     <td
                       style={{
@@ -107,7 +103,7 @@ export default async function CompetitorsPage() {
                         fontWeight: 600,
                       }}
                     >
-                      v{cv.version}
+                      {comp.versionCount}
                     </td>
                     <td
                       style={{
@@ -117,44 +113,15 @@ export default async function CompetitorsPage() {
                         color: t.inkSoft,
                       }}
                     >
-                      {cv.model_identifier ?? (
+                      {comp.latestModelIdentifier ?? (
                         <span style={{ color: t.inkFaint }}>—</span>
                       )}
                     </td>
-                    <td
-                      style={{
-                        padding: '10px 14px',
-                        fontFamily: mono,
-                        fontSize: 12,
-                      }}
-                    >
-                      <span
-                        style={{
-                          padding: '2px 8px',
-                          borderRadius: 4,
-                          backgroundColor:
-                            cv.source_type === 'manual' ? t.lineSoft : t.rewriteSoft,
-                          color:
-                            cv.source_type === 'manual' ? t.inkSoft : t.rewrite,
-                          fontSize: 11,
-                          fontWeight: 600,
-                        }}
-                      >
-                        {cv.source_type}
-                      </span>
-                    </td>
-                    <td
-                      style={{
-                        padding: '10px 14px',
-                        fontFamily: sans,
-                        fontSize: 12,
-                        color: t.inkFaint,
-                      }}
-                    >
-                      {cv.parent_competitor_version_id
-                        ? (idToName.get(cv.parent_competitor_version_id) ??
-                          cv.parent_competitor_version_id.slice(0, 8))
-                        : '—'}
+                    <td style={{ padding: '10px 14px' }}>
+                      <CompetitorToggle
+                        competitorId={comp.competitorId}
+                        enabled={comp.enabled}
+                      />
                     </td>
                   </tr>
                 ))}

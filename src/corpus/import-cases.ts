@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { glob } from 'glob';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, isNull, inArray } from 'drizzle-orm';
 
 import { db } from '@/db/client';
 import { suites, cases, caseVersions } from '@/db/schema';
@@ -28,9 +28,7 @@ async function upsertSuite(suiteName: string): Promise<string> {
   const existing = await db.query.suites.findFirst({
     where: eq(suites.name, suiteName),
   });
-  if (existing) {
-    return existing.id;
-  }
+  if (existing) return existing.id;
   const [inserted] = await db
     .insert(suites)
     .values({ name: suiteName })
@@ -45,9 +43,7 @@ async function upsertCase(suiteId: string, externalRef: string): Promise<string>
   const existing = await db.query.cases.findFirst({
     where: and(eq(cases.suiteId, suiteId), eq(cases.externalRef, externalRef)),
   });
-  if (existing) {
-    return existing.id;
-  }
+  if (existing) return existing.id;
   const [inserted] = await db
     .insert(cases)
     .values({ suiteId, externalRef })
@@ -61,7 +57,7 @@ async function upsertCase(suiteId: string, externalRef: string): Promise<string>
 async function latestCaseVersion(caseId: string) {
   return db.query.caseVersions.findFirst({
     where: eq(caseVersions.caseId, caseId),
-    orderBy: desc(caseVersions.version),
+    orderBy: (cv, { desc }) => desc(cv.version),
   });
 }
 
@@ -104,12 +100,19 @@ async function insertCaseVersion(
 export interface ImportResult {
   created: number;
   unchanged: number;
+  retired: number;
+  unretired: number;
 }
 
 /**
  * Walk all case.json files under rootDir, validate each, and upsert into the DB.
  * Idempotent + content-addressed: re-running with unchanged files is a no-op.
  * An edited file gets a new case_version row (never mutates prior versions).
+ *
+ * Reconciliation: cases whose external_ref was NOT seen this run AND have
+ * retired_at IS NULL are retired (retired_at = now()). Cases that were seen
+ * this run AND already have retired_at set are un-retired (retired_at = null).
+ * eligible_override is never touched (admin-owned).
  */
 export async function importCases(rootDir: string): Promise<ImportResult> {
   const pattern = join(rootDir, '**/case.json').replace(/\\/g, '/');
@@ -117,6 +120,9 @@ export async function importCases(rootDir: string): Promise<ImportResult> {
 
   let created = 0;
   let unchanged = 0;
+  let unretired = 0;
+
+  const seenCaseIds = new Set<string>();
 
   for (const filePath of files) {
     // Parse + validate
@@ -132,6 +138,18 @@ export async function importCases(rootDir: string): Promise<ImportResult> {
     // Upsert suite + case rows
     const suiteId = await upsertSuite(cf.suite);
     const caseId = await upsertCase(suiteId, externalRef);
+    seenCaseIds.add(caseId);
+
+    // Un-retire if the file returned (regardless of content change)
+    const caseRow = await db
+      .select({ retiredAt: cases.retiredAt })
+      .from(cases)
+      .where(eq(cases.id, caseId))
+      .limit(1);
+    if (caseRow[0]?.retiredAt !== null && caseRow[0]?.retiredAt !== undefined) {
+      await db.update(cases).set({ retiredAt: null }).where(eq(cases.id, caseId));
+      unretired++;
+    }
 
     // Check latest version
     const latest = await latestCaseVersion(caseId);
@@ -147,5 +165,36 @@ export async function importCases(rootDir: string): Promise<ImportResult> {
     created++;
   }
 
-  return { created, unchanged };
+  // Reconcile: retire cases in the same suites that were not seen this run
+  let retired = 0;
+  if (seenCaseIds.size > 0) {
+    const seenCaseIdArray = Array.from(seenCaseIds);
+
+    // Find suiteIds for the cases we did see
+    const seenCaseRows = await db
+      .select({ suiteId: cases.suiteId })
+      .from(cases)
+      .where(inArray(cases.id, seenCaseIdArray));
+
+    const seenSuiteIds = [...new Set(seenCaseRows.map(r => r.suiteId))];
+
+    if (seenSuiteIds.length > 0) {
+      // Find active cases in these suites that we did NOT see this run
+      const activeSiblings = await db
+        .select({ id: cases.id })
+        .from(cases)
+        .where(and(inArray(cases.suiteId, seenSuiteIds), isNull(cases.retiredAt)));
+
+      const toRetire = activeSiblings.filter(c => !seenCaseIds.has(c.id));
+      if (toRetire.length > 0) {
+        const now = new Date();
+        for (const c of toRetire) {
+          await db.update(cases).set({ retiredAt: now }).where(eq(cases.id, c.id));
+          retired++;
+        }
+      }
+    }
+  }
+
+  return { created, unchanged, retired, unretired };
 }

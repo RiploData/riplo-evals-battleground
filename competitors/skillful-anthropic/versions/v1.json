@@ -1,7 +1,8 @@
 {
   "model_provider": "anthropic",
   "model_identifier": "claude-opus-4-8",
-  "prompt_bundle": { "system_prompt_ref": "skill.md" },
-  "model_parameters": { "max_tokens": 2048 },
+  "execution_mode": "skill",
+  "prompt_bundle": { "skill_ref": "mbb-language" },
+  "model_parameters": { "max_tokens": 4096 },
   "source_type": "manual"
 }

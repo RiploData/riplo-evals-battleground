@@ -133,7 +133,11 @@ export default async function ReportsPage() {
                 <tr>
                   <th style={{ ...th, minWidth: 100 }}>vs.</th>
                   {h2h.competitors.map((cv) => (
-                    <th key={cv} style={{ ...th, minWidth: 80, textAlign: 'center' as const }}>
+                    <th
+                      key={cv}
+                      title={h2h.labels[cv] ?? cv}
+                      style={{ ...th, minWidth: 80, textAlign: 'center' as const, cursor: 'help' }}
+                    >
                       {shortId(cv)}
                     </th>
                   ))}
@@ -143,11 +147,13 @@ export default async function ReportsPage() {
                 {h2h.competitors.map((cvRow, i) => (
                   <tr key={cvRow} style={{ borderBottom: `1px solid ${t.lineSoft}` }}>
                     <td
+                      title={h2h.labels[cvRow] ?? cvRow}
                       style={{
                         ...td,
                         fontWeight: 600,
                         color: t.ink,
                         backgroundColor: t.lineSoft,
+                        cursor: 'help',
                       }}
                     >
                       {shortId(cvRow)}

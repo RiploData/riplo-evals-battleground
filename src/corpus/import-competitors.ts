@@ -4,6 +4,7 @@ import { db } from '@/db/client';
 import { competitors, competitorVersions } from '@/db/schema';
 import { contentHash } from '@/domain/content-hash';
 import { validateCompetitor, validateCompetitorVersion } from './competitor-schema';
+import { loadSkillSource } from '@/services/skills/skill-source';
 import { eq, and } from 'drizzle-orm';
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -172,6 +173,8 @@ export async function importCompetitors(rootDir: string): Promise<ImportResult> 
       const versionFilePath = path.join(versionsDir, versionFile);
       const versionData = validateCompetitorVersion(await readJsonFile(versionFilePath));
 
+      const executionMode = versionData.execution_mode ?? 'prompt';
+
       // Resolve system_prompt_ref if present
       let resolvedSystemPrompt = versionData.prompt_bundle.system_prompt;
       if (versionData.prompt_bundle.system_prompt_ref) {
@@ -189,6 +192,25 @@ export async function importCompetitors(rootDir: string): Promise<ImportResult> 
       if (versionData.prompt_bundle.skills !== undefined)
         cleanBundle['skills'] = versionData.prompt_bundle.skills;
 
+      // Skill-mode competitors: record execution_mode + skill_ref, and fold the
+      // skill's content hash into the version identity so editing the skill source
+      // produces a new immutable competitor version (reproducibility).
+      if (executionMode === 'skill') {
+        const skillRef = versionData.prompt_bundle.skill_ref;
+        if (!skillRef) {
+          throw new Error(
+            `Competitor version "${slug}/${versionFile}" has execution_mode "skill" but no prompt_bundle.skill_ref`,
+          );
+        }
+        const skillSource = await loadSkillSource(skillRef);
+        cleanBundle['execution_mode'] = 'skill';
+        cleanBundle['skill_ref'] = skillRef;
+        cleanBundle['skill_content_hash'] = skillSource.contentHash;
+      }
+
+      // NB: execution_mode/skill_ref/skill_content_hash live inside cleanBundle for
+      // skill mode only — so prompt-mode competitors keep their original content hash
+      // (no spurious new versions on re-seed). Do not add execution_mode at this level.
       const executionContract = {
         model_provider: versionData.model_provider,
         model_identifier: versionData.model_identifier,

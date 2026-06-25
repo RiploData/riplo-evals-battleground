@@ -9,6 +9,7 @@ import {
 import { contentHash } from '@/domain/content-hash';
 import type { GenerationProvider, ProviderRequest } from './provider';
 import { providerFor } from './providers';
+import { composeSystemPrompt } from './master-instruction';
 
 /** Render typed source blocks (text/bullets) into a plain-text block for the prompt. */
 function renderSourceBlocks(blocks: unknown): string {
@@ -32,7 +33,10 @@ function renderSourceBlocks(blocks: unknown): string {
  * model_parameters_json).
  *
  * - system  ← prompt_bundle.system_prompt (the importer resolves system_prompt_ref
- *   into system_prompt); falls back to `system` for legacy/fixture shapes.
+ *   into system_prompt); falls back to `system` for legacy/fixture shapes. The
+ *   shared MASTER_OUTPUT_INSTRUCTION is appended to every competitor's system
+ *   prompt so output *format* is normalized across the arena (see
+ *   ./master-instruction.ts).
  * - user    ← assembled from runner_input.instruction + runner_input.constraints +
  *   the rendered source material. A direct runner_input.user string overrides.
  * - params  ← model_parameters_json, passed through.
@@ -44,10 +48,11 @@ function renderRequest(
   modelParams: Record<string, unknown>,
   modelIdentifier: string,
 ): ProviderRequest {
-  const system =
+  const competitorSystem =
     (promptBundle['system_prompt'] as string | undefined) ??
     (promptBundle['system'] as string | undefined) ??
     '';
+  const system = composeSystemPrompt(competitorSystem);
 
   let user: string;
   const directUser = runnerInput['user'];

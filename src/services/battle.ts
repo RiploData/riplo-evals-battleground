@@ -227,24 +227,42 @@ export async function getNextBattle(
     }
   }
 
-  // 6. Select a pair.
-  const pair = selectPair({
-    cases: finalCaseVersions.map(cv => ({ caseVersionId: cv.id, tags: cv.tags as string[] })),
-    eligibleCompetitorVersionIds,
-    existingPairCounts,
-    seenByUser,
-    rng,
-  });
+  // 6 + 7. Select a pair and ensure both responses exist. Generation can fail for
+  // a specific cell — a skill handle not yet registered, a provider 503, a model
+  // that's down — and that must not 500 the whole battle request. On failure we
+  // exclude that pairing (via seenByUser, whose key is order-independent) and try
+  // another pair, up to a small bound; if none can be served, return null (→ 204).
+  const MAX_PAIR_ATTEMPTS = 5;
+  let pair: ReturnType<typeof selectPair> = null;
+  let respA: { responseId: string } | undefined;
+  let respB: { responseId: string } | undefined;
 
-  if (pair === null) {
-    return null;
+  for (let attempt = 0; attempt < MAX_PAIR_ATTEMPTS; attempt++) {
+    const candidate = selectPair({
+      cases: finalCaseVersions.map(cv => ({ caseVersionId: cv.id, tags: cv.tags as string[] })),
+      eligibleCompetitorVersionIds,
+      existingPairCounts,
+      seenByUser,
+      rng,
+    });
+    if (candidate === null) break;
+
+    try {
+      [respA, respB] = await Promise.all([
+        ensureResponse(candidate.caseVersionId, candidate.competitorA, 0, campaign.id, provider),
+        ensureResponse(candidate.caseVersionId, candidate.competitorB, 0, campaign.id, provider),
+      ]);
+      pair = candidate;
+      break;
+    } catch {
+      // Couldn't generate this pairing right now — skip it and try a different one.
+      seenByUser.add(pairKey(candidate.caseVersionId, candidate.competitorA, candidate.competitorB));
+    }
   }
 
-  // 7. Ensure responses exist for both cells.
-  const [respA, respB] = await Promise.all([
-    ensureResponse(pair.caseVersionId, pair.competitorA, 0, campaign.id, provider),
-    ensureResponse(pair.caseVersionId, pair.competitorB, 0, campaign.id, provider),
-  ]);
+  if (pair === null || !respA || !respB) {
+    return null;
+  }
 
   // 8. Fetch the response rows (for blinding).
   const [responseRowA, responseRowB] = await Promise.all([

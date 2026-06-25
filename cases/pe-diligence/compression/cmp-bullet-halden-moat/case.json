@@ -1,0 +1,50 @@
+{
+  "kind": "compression",
+  "suite": "Riplo Consulting v1",
+  "dataset_split": "dev",
+  "title": "Compress the moat to one bullet",
+  "guidance": "Reward the bullet that packs the most decision-relevant content into the fewest words and reads like a partner wrote it. Penalise padding, vagueness, or an AI 'feel'.",
+  "output_spec": {
+    "target": "Single IC-slide bullet",
+    "parts": [
+      {
+        "type": "bullet",
+        "label": "Bullet",
+        "note": "one markdown bullet, <=30 words"
+      }
+    ]
+  },
+  "runner_input": {
+    "instruction": "Capture the essence of the material below in a single bullet for an IC slide.",
+    "constraints": "Output: exactly one markdown bullet (start with '- '). Max 30 words. No title, no second bullet."
+  },
+  "source_blocks": [
+    {
+      "type": "text",
+      "text": "Halden owns the Halden Code, the de-facto UK standard for food-safety management schedules, used by food manufacturers, hospitality groups and contract caterers. PE buyout under review by Aldgate Capital. All figures synthetic."
+    },
+    {
+      "type": "bullets",
+      "items": [
+        "1,180 ratified schedules across 90 process types; IFSM endorsement with a 12-year exclusivity",
+        "Named in BRCGS audit guidance and contract-catering tenders; embedded in 14 QMS-software integrations",
+        "Buyers: food manufacturers 38% of ARR, hospitality & contract caterers 34%, retail 16%, other 12%"
+      ]
+    }
+  ],
+  "hidden_metadata": {
+    "domain": "pe-diligence",
+    "difficulty": "easy",
+    "failure_modes": [
+      "lists everything",
+      "loses the 'why it's durable'"
+    ]
+  },
+  "tags": [
+    "pe-diligence",
+    "moat"
+  ],
+  "rubric_notes": [
+    "Should land the institutional moat (endorsement + integrations), not enumerate facts."
+  ]
+}

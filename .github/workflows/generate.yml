@@ -1,0 +1,65 @@
+name: Seed & Generate (remote)
+
+# Button-click (Actions tab → "Run workflow") corpus seed + response generation
+# against the remote RDS. Runs on a GitHub-hosted runner — no Vercel 300s limit —
+# so the slow skill loops and provider retries complete here, not in the request path.
+#
+# Required GitHub repo secrets:
+#   DATABASE_URL        postgres://…@<rds-host>:5432/riplo-arena
+#   ANTHROPIC_API_KEY   (same key that uploaded the skill — handles are workspace-scoped)
+#   OPENAI_API_KEY
+#   GEMINI_API_KEY
+# config/skill-registry.json must be committed (skill handles the runner reads).
+
+on:
+  workflow_dispatch:
+    inputs:
+      wipe:
+        description: 'Wipe ALL remote data first (TRUNCATE every table), then re-seed from scratch'
+        type: boolean
+        default: false
+      generate:
+        description: 'Run response generation after seeding'
+        type: boolean
+        default: true
+
+# Never let two generation runs race on the same DB.
+concurrency:
+  group: seed-generate-remote
+  cancel-in-progress: false
+
+jobs:
+  seed-generate:
+    name: Seed & generate
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DATABASE_SSL: 'true'
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Wipe remote DB (only if requested)
+        if: ${{ inputs.wipe }}
+        run: npm run db:reset -- --yes
+
+      - name: Migrate schema (idempotent)
+        run: npm run db:migrate
+
+      - name: Seed corpus (config + competitors + cases + campaign)
+        run: npm run seed
+
+      - name: Generate responses (run to completion)
+        if: ${{ inputs.generate }}
+        run: npm run generate

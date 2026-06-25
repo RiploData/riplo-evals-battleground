@@ -1,0 +1,42 @@
+{
+  "kind": "register-switch",
+  "suite": "Riplo Consulting v1",
+  "dataset_split": "dev",
+  "title": "Render the Northwind tech note as bullets",
+  "guidance": "Reward bullet(s) at the right density for a body slide — crisp and telegraphic but still parseable. The rater judges whether the density is right.",
+  "output_spec": {
+    "target": "Body-slide bullet(s)",
+    "parts": [
+      {
+        "type": "bullets",
+        "label": "Bullet(s)",
+        "note": "model chooses density"
+      }
+    ]
+  },
+  "runner_input": {
+    "instruction": "Render the text below as a body-slide bullet or bullets.",
+    "constraints": "Output: a markdown bullet, or a series of bullets. You decide how many and how dense."
+  },
+  "source_blocks": [
+    {
+      "type": "text",
+      "text": "The engineering team is relatively small for the volume processed, and a meaningful portion of the most critical knowledge — particularly around the core ledger — sits with a single individual, which means knowledge transfer and documentation should be treated as a priority in the first hundred days after completion."
+    }
+  ],
+  "hidden_metadata": {
+    "domain": "pe-diligence",
+    "difficulty": "medium",
+    "failure_modes": [
+      "stays prose-y",
+      "loses the key-person point"
+    ]
+  },
+  "tags": [
+    "pe-diligence",
+    "telegraphic"
+  ],
+  "rubric_notes": [
+    "Should land key-person risk on the ledger + day-1-100 documentation as bullet(s)."
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "kind": "judgment",
+  "suite": "Riplo Consulting v1",
+  "dataset_split": "dev",
+  "title": "Calibrate whether each evidence item answers the question",
+  "guidance": "Reward calibration that varies with the strength of the evidence and reads cleanly as a table. Penalise blanket confidence or uncalibrated ratings.",
+  "output_spec": {
+    "target": "Confidence table",
+    "parts": [
+      {
+        "type": "table",
+        "label": "Calibration",
+        "note": "Claim | Confidence | Rationale"
+      }
+    ]
+  },
+  "runner_input": {
+    "instruction": "Rate the confidence of each claim/assumption below and give a one-line rationale.",
+    "constraints": "Output: a markdown table with exactly these columns: Claim | Confidence | Rationale."
+  },
+  "source_blocks": [
+    {
+      "type": "bullets",
+      "items": [
+        "Question asks for board-level DEI data, with figures.",
+        "Evidence 1: a narrative paragraph on commitment to diversity (no data).",
+        "Evidence 2: one anecdote about a single portfolio company.",
+        "Evidence 3: no portfolio-wide board-composition figures provided."
+      ]
+    }
+  ],
+  "hidden_metadata": {
+    "domain": "ddq",
+    "difficulty": "easy",
+    "failure_modes": [
+      "claims coverage it lacks",
+      "no gap flagged"
+    ]
+  },
+  "tags": [
+    "ddq",
+    "coverage"
+  ],
+  "rubric_notes": [
+    "The question needs board-level data; rate the narrative/anecdote Low and name the missing portfolio-wide data."
+  ]
+}

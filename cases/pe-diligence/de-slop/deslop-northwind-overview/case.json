@@ -1,0 +1,42 @@
+{
+  "kind": "de-slop",
+  "suite": "Riplo Consulting v1",
+  "dataset_split": "dev",
+  "title": "De-slop the Northwind overview paragraph",
+  "guidance": "Reward prose that reads like an experienced MBB analyst wrote it, with every fact preserved. Penalise residual AI tells or any changed figure.",
+  "output_spec": {
+    "target": "Rewritten text",
+    "parts": [
+      {
+        "type": "text",
+        "label": "Rewrite",
+        "note": "one paragraph, same shape as source"
+      }
+    ]
+  },
+  "runner_input": {
+    "instruction": "Rewrite the text below so it reads like an experienced MBB analyst wrote it for a PE audience. Keep every fact.",
+    "constraints": "Output: the rewritten text in the same shape as the source (one paragraph)."
+  },
+  "source_blocks": [
+    {
+      "type": "text",
+      "text": "Northwind isn't just a payments company — it's a thesis on the future of mid-market commerce. In today's rapidly evolving payments landscape, the company stands as a testament to durable, compounding growth. As we delve into the metrics, the 38% growth and 121% NRR quietly underscore a fundamentally robust engine. Despite its challenges, the opportunity is compelling."
+    }
+  ],
+  "hidden_metadata": {
+    "domain": "pe-diligence",
+    "difficulty": "medium",
+    "failure_modes": [
+      "leaves tells",
+      "drops the 38% / 121%"
+    ]
+  },
+  "tags": [
+    "pe-diligence",
+    "overview"
+  ],
+  "rubric_notes": [
+    "38% growth and 121% NRR must survive; cut the 'isn't just X — it's Y', testament, delve, quietly, Despite its challenges."
+  ]
+}

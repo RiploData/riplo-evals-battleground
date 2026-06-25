@@ -1,0 +1,52 @@
+{
+  "kind": "action-title",
+  "suite": "Riplo Consulting v1",
+  "dataset_split": "dev",
+  "title": "Title the EV-charging slide",
+  "guidance": "Reward a title that states the takeaway as a claim and reads like an MBB action title. Penalise topic labels or anything unsupported by the body.",
+  "output_spec": {
+    "target": "Slide title",
+    "parts": [
+      {
+        "type": "title",
+        "label": "Title",
+        "note": "single line, no body"
+      }
+    ]
+  },
+  "runner_input": {
+    "instruction": "Write the slide title as the takeaway of the body below.",
+    "constraints": "Output: a single title line only. No body, no bullets, no colon-subtitle."
+  },
+  "source_blocks": [
+    {
+      "type": "text",
+      "text": "Working title: 'EV charging market'"
+    },
+    {
+      "type": "bullets",
+      "items": [
+        "Commercial charging install + maintenance; ~£1.4bn annual market by 2030",
+        "Drivers: 2035 ICE-sales ban, fleet-electrification mandates, workplace-charging grants",
+        "Installer base highly fragmented; top 10 hold <20% share",
+        "Bottleneck: grid-connection lead times of 9–18 months cap near-term volume",
+        "Hardware commoditising; value shifting to software + maintenance contracts"
+      ]
+    }
+  ],
+  "hidden_metadata": {
+    "domain": "market-sizing",
+    "difficulty": "easy",
+    "failure_modes": [
+      "label title",
+      "ignores the bottleneck"
+    ]
+  },
+  "tags": [
+    "market-sizing",
+    "title"
+  ],
+  "rubric_notes": [
+    "Could assert big market, but grid connection gates the timing."
+  ]
+}

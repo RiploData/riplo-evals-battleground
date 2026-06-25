@@ -1,14 +1,13 @@
-# cases/ — Riplo eval corpus (Stream A seed)
+# cases/ — Riplo eval corpus (rev 2)
 
-Path-encoded taxonomy: `cases/<domain>/<kind>/<case-slug>/case.json`. Each `case.json` is self-contained — the source material is embedded in `source_blocks`, so a case is fully battle-ready with no external file.
+Clean rebuild per review. Path-encoded: `cases/<domain>/<kind>/<slug>/case.json`. Same self-contained schema as before (source embedded in `source_blocks`) — nothing new added to the file shape.
 
-- **domains:** pe-diligence · market-sizing · offer-factory · ddq · cross
-- **kinds:** compression · de-slop · action-title · pyramid-restructure · register-switch · earned-antithesis · comparable · judgment · dependency-naming · synthesis-title-test
-- **suite:** "Riplo Consulting v1"
-- **dataset_split:** dev (iterate) · validation (test promoted variants) · holdout (never battled routinely)
+40 cases, all `dataset_split: dev`. Domains: pe-diligence, market-sizing, ddq, cross (offer-factory removed). Kinds: compression, action-title, de-slop, pyramid-restructure, register-switch, judgment(confidence). Removed: comparable, earned-antithesis, synthesis-title-test, dependency-naming.
 
-All companies, people, funds and figures are **synthetic**. The pe-diligence cases share a consistent invented target (Halden, a food-safety standards SaaS — see `eval-source_project-saffron-storyline.md` for the full storyline they were sliced from).
+Volumes: compression 14 (10 single-bullet + 4 one-pager) · action-title 8 · de-slop 6 · pyramid 4 · register-switch 4 · judgment-confidence 4.
 
-Schema per case.json: `kind`, `title`, `guidance`, `output_spec{target,parts}`, `runner_input{instruction,constraints}`, `source_blocks[]`, `hidden_metadata{domain,difficulty,failure_modes}`, `tags[]`, `dataset_split`, `rubric_notes[]`, `suite`.
+Two rules applied throughout:
+1. `constraints` are OUTPUT FORMAT ONLY — no language guidance (no 'avoid em-dashes', no banned words). Whether the model produces clean MBB language unprompted is the thing being tested.
+2. The quality bar lives in `guidance` (rater-facing) and `rubric_notes` (hidden). Output formats are standardised markdown (single bullet / title only / title+3 bullets / nested bullets / table).
 
-`rubric_notes` is authoring discipline + future LLM-judge seed — NOT the scoring mechanism (scoring stays pairwise-preference).
+This corpus replaced the original `cases/` tree (rev 1) as the new starting point.

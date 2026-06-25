@@ -1,0 +1,42 @@
+{
+  "kind": "de-slop",
+  "suite": "Riplo Consulting v1",
+  "dataset_split": "dev",
+  "title": "De-slop the payroll-market overview",
+  "guidance": "Reward prose that reads like an experienced MBB analyst wrote it, with every fact preserved. Penalise residual AI tells or any changed figure.",
+  "output_spec": {
+    "target": "Rewritten text",
+    "parts": [
+      {
+        "type": "text",
+        "label": "Rewrite",
+        "note": "one paragraph, same shape as source"
+      }
+    ]
+  },
+  "runner_input": {
+    "instruction": "Rewrite the text below so it reads like an experienced MBB analyst wrote it for a PE audience. Keep every fact.",
+    "constraints": "Output: the rewritten text in the same shape as the source (one paragraph)."
+  },
+  "source_blocks": [
+    {
+      "type": "text",
+      "text": "The SME payroll landscape is a dynamic tapestry of opportunity. In today's complex regulatory environment, it's worth noting that a £1.8bn SAM growing at a remarkable 11% stands as a testament to structural demand. This isn't just a market — it's a movement. Despite its challenges, the opportunity is clear."
+    }
+  ],
+  "hidden_metadata": {
+    "domain": "market-sizing",
+    "difficulty": "easy",
+    "failure_modes": [
+      "leaves tells",
+      "keeps 'it's a movement'"
+    ]
+  },
+  "tags": [
+    "market-sizing",
+    "word-choice"
+  ],
+  "rubric_notes": [
+    "£1.8bn and 11% must survive; cut tapestry, 'it's worth noting', testament, 'this isn't a market — it's a movement', Despite its challenges."
+  ]
+}

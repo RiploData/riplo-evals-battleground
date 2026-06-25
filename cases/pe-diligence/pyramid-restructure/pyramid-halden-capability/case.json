@@ -1,0 +1,49 @@
+{
+  "kind": "pyramid-restructure",
+  "suite": "Riplo Consulting v1",
+  "dataset_split": "dev",
+  "title": "Restructure the Halden capability note answer-first",
+  "guidance": "Reward an answer-first structure with clean, well-nested bullets. Penalise keeping the build-up or burying the recommendation.",
+  "output_spec": {
+    "target": "Restructured note",
+    "parts": [
+      {
+        "type": "title",
+        "label": "Recommendation",
+        "note": "bold first line"
+      },
+      {
+        "type": "bullets",
+        "label": "Nested support",
+        "note": "claims + indented evidence"
+      }
+    ]
+  },
+  "runner_input": {
+    "instruction": "Restructure the note below so the recommendation leads, then the supporting arguments with their evidence.",
+    "constraints": "Output: markdown — a bold recommendation on the first line, then nested bullets (top-level claims, with evidence indented beneath each)."
+  },
+  "source_blocks": [
+    {
+      "type": "text",
+      "text": "The org chart lists 11 developers, 1 DevOps, 2 product and 3 QA, and no ML or data engineer. AutoSchedule scored 88–95% on a 12,000-SKU test, implying a real ML pipeline. The CTO is praised and an analytics module was pulled forward. Heavy model calls run via a vendor API. Because we can't see ML ownership, we can't yet size the £6–9m above-plan upside. So capability is green-amber: it gates the size, not the existence, of the upside, and the management session must confirm ML ownership."
+    }
+  ],
+  "hidden_metadata": {
+    "domain": "pe-diligence",
+    "difficulty": "medium",
+    "failure_modes": [
+      "conclusion still last",
+      "flat (not nested)",
+      "args overlap"
+    ]
+  },
+  "tags": [
+    "pe-diligence",
+    "structure"
+  ],
+  "rubric_notes": [
+    "Line 1: capability is green-amber, gates the size of the upside; confirm ML ownership.",
+    "Nested evidence: product output implies ML; org chart shows no role; vendor-API dependency."
+  ]
+}

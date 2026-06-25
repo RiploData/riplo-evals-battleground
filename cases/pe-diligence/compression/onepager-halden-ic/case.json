@@ -1,0 +1,85 @@
+{
+  "kind": "compression",
+  "suite": "Riplo Consulting v1",
+  "dataset_split": "dev",
+  "title": "Compress the Halden storyline to an IC one-pager",
+  "guidance": "Reward the version that leads with the answer and would help a partner reach a call; tone should read partner-grade. Penalise even coverage with no verdict.",
+  "output_spec": {
+    "target": "IC one-pager",
+    "parts": [
+      {
+        "type": "title",
+        "label": "Headline",
+        "note": "one bold line, states the call"
+      },
+      {
+        "type": "bullets",
+        "label": "Supporting points",
+        "note": "3 bullets"
+      }
+    ]
+  },
+  "runner_input": {
+    "instruction": "Compress the material below into an IC one-pager: lead with the answer, then the few things that change the decision.",
+    "constraints": "Output: markdown — one bold title line, then exactly three bullets."
+  },
+  "source_blocks": [
+    {
+      "type": "text",
+      "text": "Halden owns the Halden Code, the de-facto UK standard for food-safety management schedules, used by food manufacturers, hospitality groups and contract caterers. PE buyout under review by Aldgate Capital. All figures synthetic."
+    },
+    {
+      "type": "text",
+      "text": "Overall: AI is a net positive; the moat is institutional, no funded challenger, three AI levers. Buy, gated on integration-contract terms and ML capability."
+    },
+    {
+      "type": "bullets",
+      "items": [
+        "ARR £11.2m; recurring 94%; gross margin 88%; Adj. EBITDA £3.1m (30%); FCF £2.4m",
+        "HaldenOS platform on 48% of ~900 clients, up from 22% a year ago; 18% ARR uplift on migrations",
+        "NRR 112%; GRR 91%; NPS +58; voluntary attrition 6.1%; blended ACV ~£12k",
+        "FY31F plan: recurring billings £39.5m (~3.4x; 28% CAGR); Adj. EBITDA £14.2m (36%); price assumption 4% vs 5.8% realised"
+      ]
+    },
+    {
+      "type": "bullets",
+      "items": [
+        "1,180 ratified schedules across 90 process types; IFSM endorsement with a 12-year exclusivity",
+        "Named in BRCGS audit guidance and contract-catering tenders; embedded in 14 QMS-software integrations",
+        "Buyers: food manufacturers 38% of ARR, hospitality & contract caterers 34%, retail 16%, other 12%"
+      ]
+    },
+    {
+      "type": "bullets",
+      "items": [
+        "AutoSchedule (AI process-to-schedule mapping) shipped Jan 2026; £140k ARR by month 4; 88–95% accuracy on a 12,000-SKU test",
+        "Proprietary AI authoring tool used by the 8-FTE food-safety author team; an analytics module was pulled forward"
+      ]
+    },
+    {
+      "type": "text",
+      "text": "The one credible AI-enabled disruption path is a QMS/food-safety software vendor using LLMs to generate a competing schedule library, routing around the integration dependency, and bidding for trade-body and auditor recognition — five sequential steps over 5–8 years. Customer DIY fails at the auditor gate (needs a citable, ratified source) and the allergen-liability gate (Natasha's Law is criminally enforced)."
+    },
+    {
+      "type": "text",
+      "text": "The CIM org chart lists an 18-FTE engineering team: 11 developers, 1 DevOps, 2 product, 3 QA — and no ML or data engineer. AutoSchedule's accuracy implies real ML plumbing; the heavy model calls run through a vendor API. The CTO is praised across interviews."
+    }
+  ],
+  "hidden_metadata": {
+    "domain": "pe-diligence",
+    "difficulty": "medium",
+    "failure_modes": [
+      "over-recall",
+      "no verdict in the title",
+      "buries the capability risk"
+    ]
+  },
+  "tags": [
+    "pe-diligence",
+    "one-pager"
+  ],
+  "rubric_notes": [
+    "Verdict: buy, gated on integration-contract terms and ML capability.",
+    "Foreground the capability gap as the upside-sizing risk."
+  ]
+}

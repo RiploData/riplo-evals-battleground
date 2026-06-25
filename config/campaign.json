@@ -10,7 +10,8 @@
     { "slug": "token-maxx-3-openai", "version": 1 },
     { "slug": "token-maxx-3-anthropic", "version": 1 },
     { "slug": "skillful-openai", "version": 1 },
-    { "slug": "skillful-anthropic", "version": 1 }
+    { "slug": "skillful-anthropic", "version": 1 },
+    { "slug": "vanilla-gemini", "version": 1 }
   ],
   "replicates": 1,
   "matchmaking_strategy": "coverage"

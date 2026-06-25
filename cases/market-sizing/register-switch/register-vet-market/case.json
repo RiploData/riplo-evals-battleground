@@ -1,0 +1,42 @@
+{
+  "kind": "register-switch",
+  "suite": "Riplo Consulting v1",
+  "dataset_split": "dev",
+  "title": "Render the vet-market prose as bullets",
+  "guidance": "Reward bullet(s) at the right density for a body slide — crisp and telegraphic but still parseable. The rater judges whether the density is right.",
+  "output_spec": {
+    "target": "Body-slide bullet(s)",
+    "parts": [
+      {
+        "type": "bullets",
+        "label": "Bullet(s)",
+        "note": "model chooses density"
+      }
+    ]
+  },
+  "runner_input": {
+    "instruction": "Render the text below as a body-slide bullet or bullets.",
+    "constraints": "Output: a markdown bullet, or a series of bullets. You decide how many and how dense."
+  },
+  "source_blocks": [
+    {
+      "type": "text",
+      "text": "The serviceable market is around two hundred and seventy-one million pounds, growing at roughly nine percent a year, and the two incumbent vendors holding close to sixty percent of the market are still on-premise and have not shipped a major release in over four years, which together with a new 2025 clinical-record guideline creates an opening for a cloud-native challenger."
+    }
+  ],
+  "hidden_metadata": {
+    "domain": "market-sizing",
+    "difficulty": "easy",
+    "failure_modes": [
+      "stays prose-y",
+      "drops a number"
+    ]
+  },
+  "tags": [
+    "market-sizing",
+    "telegraphic"
+  ],
+  "rubric_notes": [
+    "Should become crisp bullets keeping £271m, 9%, 60% incumbent share, 2025 guideline."
+  ]
+}

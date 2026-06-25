@@ -1,0 +1,52 @@
+{
+  "kind": "compression",
+  "suite": "Riplo Consulting v1",
+  "dataset_split": "dev",
+  "title": "Compress the payroll sizing to one bullet",
+  "guidance": "Reward the bullet that packs the most decision-relevant content into the fewest words and reads like a partner wrote it. Penalise padding, vagueness, or an AI 'feel'.",
+  "output_spec": {
+    "target": "Single IC-slide bullet",
+    "parts": [
+      {
+        "type": "bullet",
+        "label": "Bullet",
+        "note": "one markdown bullet, <=30 words"
+      }
+    ]
+  },
+  "runner_input": {
+    "instruction": "Capture the essence of the material below in a single bullet for an IC slide.",
+    "constraints": "Output: exactly one markdown bullet (start with '- '). Max 30 words. No title, no second bullet."
+  },
+  "source_blocks": [
+    {
+      "type": "text",
+      "text": "UK SME payroll software market. ONS business counts. Synthetic."
+    },
+    {
+      "type": "bullets",
+      "items": [
+        "1.4m businesses with 5–249 employees; ~60% (840k) on dedicated payroll software",
+        "Dedicated SAM ~£1.1bn (840k × £1.3k ACV); greenfield (manual switchers) ~£730m; total SAM ~£1.8bn",
+        "Growing ~11% YoY (auto-enrolment complexity, IR35 enforcement, RTI upgrades)",
+        "Incumbents: 2 legacy players 55% share, no major update in 3+ yrs, NPS ~18",
+        "Tailwind: open banking + HMRC API modernisation (2025) lower the build cost for challengers"
+      ]
+    }
+  ],
+  "hidden_metadata": {
+    "domain": "market-sizing",
+    "difficulty": "medium",
+    "failure_modes": [
+      "restates methodology",
+      "misses the wedge"
+    ]
+  },
+  "tags": [
+    "market-sizing",
+    "payroll"
+  ],
+  "rubric_notes": [
+    "Should connect £1.8bn SAM to the HMRC-API / open-banking wedge."
+  ]
+}

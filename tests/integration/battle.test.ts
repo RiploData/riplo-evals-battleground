@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { describe, it, expect, afterAll } from 'vitest';
-import { eq, inArray } from 'drizzle-orm';
+import { eq, ne, and, isNull, inArray } from 'drizzle-orm';
 import { db, pool } from '@/db/client';
 import {
   users,
@@ -17,6 +17,7 @@ import {
   generationAttempts,
 } from '@/db/schema';
 import { getNextBattle } from '@/services/battle';
+import { ensureResponse } from '@/services/generation/runner';
 import type { SessionUser } from '@/auth/workos';
 import type { GenerationProvider, ProviderResult } from '@/services/generation/provider';
 
@@ -40,6 +41,23 @@ const fakeProvider: GenerationProvider = {
     };
   },
 };
+
+// getNextBattle selects the oldest ACTIVE campaign globally, so in a shared test DB
+// we must make a fixture's campaign the only active one to serve it deterministically.
+async function isolateCampaign(keepId: string): Promise<void> {
+  await db
+    .update(campaigns)
+    .set({ endedAt: new Date() })
+    .where(and(ne(campaigns.id, keepId), isNull(campaigns.endedAt)));
+}
+
+// Precompute both competitor responses for a fixture's case (replicate 0), the way
+// the admin "Generate missing" action would, so the read-only battleground can serve them.
+async function precompute(fixture: SeedResult): Promise<void> {
+  for (const cvId of [fixture.compAVersionId, fixture.compBVersionId]) {
+    await ensureResponse(fixture.caseVersionId, cvId, 0, fixture.campaignId, fakeProvider);
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Cleanup tracking (FK-safe teardown order)
@@ -304,11 +322,37 @@ function allowedOptionKeys(option: Record<string, unknown>): string[] {
 // ---------------------------------------------------------------------------
 
 describe('battle service integration', () => {
+  it('returns null and generates nothing when no cells are precomputed', async () => {
+    const user = await seedUser('t0');
+    const fixture = await seedBattleFixture('t0');
+    await isolateCampaign(fixture.campaignId);
+
+    // Nothing precomputed → the read-only battleground has no serveable pair.
+    const payload = await getNextBattle(user, { rng: Math.random });
+    expect(payload).toBeNull();
+
+    // Crucially, it must NOT have lazily generated anything at view time.
+    const attempts = await db
+      .select({ id: generationAttempts.id })
+      .from(generationAttempts)
+      .where(eq(generationAttempts.caseVersionId, fixture.caseVersionId));
+    expect(attempts).toHaveLength(0);
+
+    const resps = await db
+      .select({ id: responses.id })
+      .from(responses)
+      .where(inArray(responses.competitorVersionId, [fixture.compAVersionId, fixture.compBVersionId]));
+    expect(resps).toHaveLength(0);
+  });
+
   it('returns a payload with exactly 2 blinded options and creates an assignment row', async () => {
     const user = await seedUser('t1');
     const fixture = await seedBattleFixture('t1');
+    await isolateCampaign(fixture.campaignId);
+    await precompute(fixture);
 
-    const payload = await getNextBattle(user, { provider: fakeProvider, rng: Math.random });
+    // No provider passed — the battleground serves precomputed responses only.
+    const payload = await getNextBattle(user, { rng: Math.random });
 
     expect(payload).not.toBeNull();
     expect(payload!.ui_version).toBe('arena-1');
@@ -375,11 +419,12 @@ describe('battle service integration', () => {
   it('randomised order is observed across different rng values', async () => {
     const user = await seedUser('t2');
     const fixture = await seedBattleFixture('t2');
+    await isolateCampaign(fixture.campaignId);
+    await precompute(fixture);
 
     // Call with rng always returning < 0.5 (flip = true → compB is left)
     const payloadFlipped = await getNextBattle(user, {
-      provider: fakeProvider,
-      rng: () => 0.1, // first call (selectPair), second call (flip) — 0.1 < 0.5 → flip
+      rng: () => 0.1, // selectPair + flip — 0.1 < 0.5 → flip
     });
 
     // Track cleanup
@@ -395,8 +440,7 @@ describe('battle service integration', () => {
     // Call with a second user and rng always returning >= 0.5 (no flip → compA is left)
     const user2 = await seedUser('t2b');
     const payloadNotFlipped = await getNextBattle(user2, {
-      provider: fakeProvider,
-      rng: () => 0.9, // first call (selectPair), second call (flip) — 0.9 >= 0.5 → no flip
+      rng: () => 0.9, // selectPair + flip — 0.9 >= 0.5 → no flip
     });
 
     if (payloadNotFlipped) {
@@ -447,9 +491,11 @@ describe('battle service integration', () => {
   it('returns null (→204) when the only pair has already been seen by the user', async () => {
     const user = await seedUser('t3');
     const fixture = await seedBattleFixture('t3');
+    await isolateCampaign(fixture.campaignId);
+    await precompute(fixture);
 
     // First call — should succeed
-    const first = await getNextBattle(user, { provider: fakeProvider, rng: Math.random });
+    const first = await getNextBattle(user, { rng: Math.random });
     expect(first).not.toBeNull();
 
     // Track cleanup for first call's rows
@@ -463,7 +509,7 @@ describe('battle service integration', () => {
     }
 
     // Second call for the same user — the single pair is now in seenByUser → null
-    const second = await getNextBattle(user, { provider: fakeProvider, rng: Math.random });
+    const second = await getNextBattle(user, { rng: Math.random });
     expect(second).toBeNull();
 
     // Track responses

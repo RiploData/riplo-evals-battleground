@@ -2,7 +2,7 @@ import { desc } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { campaigns, caseVersions, competitorVersions } from '@/db/schema';
 import { requireUser, requireRole } from '@/auth/workos';
-import { generationStatus } from '@/services/generate-batch';
+import { campaignCellState } from '@/services/generate-batch';
 import { t, sans, mono } from '@/ui/tokens';
 import GenerateButton from './GenerateButton';
 import GenerateMissingButton from './GenerateMissingButton';
@@ -38,12 +38,18 @@ export default async function GeneratePage() {
 
   const eligibleCvIds: string[] = defaultCampaign?.eligibleCompetitorVersionIds ?? [];
 
-  const statusCounts: Record<string, number> = defaultCampaign
-    ? await generationStatus(defaultCampaign.id)
-    : {};
+  const cellState = defaultCampaign
+    ? await campaignCellState(defaultCampaign.id)
+    : { total: 0, ready: 0, missing: 0, missingWithFailures: 0 };
 
-  const statusEntries = Object.entries(statusCounts);
-  const total = statusEntries.reduce((sum, [, n]) => sum + n, 0);
+  const total = cellState.total;
+  // Rows describe the CURRENT state of eligible cells (distinct cells), not the
+  // historical attempt log — so re-running generation never inflates these.
+  const stateRows: { label: string; count: number; tone: 'good' | 'bad' | 'neutral' }[] = [
+    { label: 'ready (precomputed)', count: cellState.ready, tone: 'good' },
+    { label: 'missing', count: cellState.missing, tone: cellState.missing > 0 ? 'bad' : 'neutral' },
+    { label: 'missing with failures', count: cellState.missingWithFailures, tone: cellState.missingWithFailures > 0 ? 'bad' : 'neutral' },
+  ];
 
   return (
     <div>
@@ -166,18 +172,18 @@ export default async function GeneratePage() {
             fontFamily: sans,
           }}
         >
-          Generation status
+          Cell coverage
         </div>
 
         {total === 0 ? (
           <div style={{ padding: 20, fontSize: 13, color: t.inkFaint, fontFamily: sans }}>
-            No generation attempts recorded yet.
+            No eligible cells for this campaign yet.
           </div>
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
               <tr style={{ borderBottom: `1px solid ${t.line}`, backgroundColor: t.lineSoft }}>
-                {['Status', 'Count', '% of total'].map((col) => (
+                {['Cell state', 'Count', '% of total'].map((col) => (
                   <th
                     key={col}
                     style={{
@@ -197,12 +203,11 @@ export default async function GeneratePage() {
               </tr>
             </thead>
             <tbody>
-              {statusEntries.map(([status, count], i) => (
+              {stateRows.map((row, i) => (
                 <tr
-                  key={status}
+                  key={row.label}
                   style={{
-                    borderBottom:
-                      i < statusEntries.length - 1 ? `1px solid ${t.lineSoft}` : 'none',
+                    borderBottom: i < stateRows.length - 1 ? `1px solid ${t.lineSoft}` : 'none',
                   }}
                 >
                   <td
@@ -210,16 +215,11 @@ export default async function GeneratePage() {
                       padding: '9px 14px',
                       fontFamily: mono,
                       fontSize: 12,
-                      color:
-                        status === 'completed'
-                          ? t.accent
-                          : status === 'failed'
-                            ? '#b91c1c'
-                            : t.inkSoft,
-                      fontWeight: status === 'completed' || status === 'failed' ? 600 : 400,
+                      color: row.tone === 'good' ? t.accent : row.tone === 'bad' ? '#b91c1c' : t.inkSoft,
+                      fontWeight: row.tone === 'neutral' ? 400 : 600,
                     }}
                   >
-                    {status}
+                    {row.label}
                   </td>
                   <td
                     style={{
@@ -230,12 +230,12 @@ export default async function GeneratePage() {
                       fontWeight: 600,
                     }}
                   >
-                    {count}
+                    {row.count}
                   </td>
                   <td
                     style={{ padding: '9px 14px', fontFamily: mono, fontSize: 12, color: t.inkSoft }}
                   >
-                    {total > 0 ? `${((count / total) * 100).toFixed(1)}%` : '—'}
+                    {total > 0 ? `${((row.count / total) * 100).toFixed(1)}%` : '—'}
                   </td>
                 </tr>
               ))}
@@ -249,7 +249,7 @@ export default async function GeneratePage() {
                     color: t.ink,
                   }}
                 >
-                  Total
+                  Total eligible cells
                 </td>
                 <td
                   style={{

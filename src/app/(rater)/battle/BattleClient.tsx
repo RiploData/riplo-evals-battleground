@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Check, PenLine, CornerDownLeft, ArrowUp, ArrowDown, Pencil, ArrowLeft, FileText, List } from 'lucide-react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import MarkdownEditor from '@/ui/MarkdownEditor';
 import { t, sans, serif, mono } from '@/ui/tokens';
 import type { BattlePayload, BattleOption, VoteRequest, Outcome, RewriteForkedFrom } from '@/types/contracts';
 
@@ -277,6 +278,17 @@ export default function BattleClient() {
         .md table { border-collapse: collapse; margin: 0 0 10px; font-size: 14px; }
         .md th, .md td { border: 1px solid ${t.line}; padding: 4px 9px; text-align: left; }
         .md hr { border: none; border-top: 1px solid ${t.line}; margin: 14px 0; }
+        .tt-content { flex: 1; min-height: 0; overflow: auto; }
+        .tt-wrap .ProseMirror { min-height: 100%; padding: 14px 16px; outline: none; font-family: ${serif}; font-size: 15px; line-height: 1.62; color: ${t.ink}; }
+        .tt-wrap .ProseMirror:focus { outline: none; }
+        .tt-wrap .ProseMirror > :first-child { margin-top: 0; }
+        .tt-wrap .ProseMirror p { margin: 0 0 10px; }
+        .tt-wrap .ProseMirror strong { font-weight: 700; }
+        .tt-wrap .ProseMirror ul, .tt-wrap .ProseMirror ol { margin: 0 0 10px; padding-left: 22px; }
+        .tt-wrap .ProseMirror li { margin-bottom: 4px; }
+        .tt-wrap .ProseMirror h2 { font-family: ${sans}; font-weight: 600; font-size: 16px; margin: 14px 0 8px; }
+        .tt-wrap .ProseMirror code { font-family: ${mono}; font-size: 13px; background: ${t.lineSoft}; padding: 1px 5px; border-radius: 4px; }
+        .tt-wrap .ProseMirror p.is-editor-empty:first-child::before { content: 'Write your version…'; color: ${t.inkFaint}; float: left; height: 0; pointer-events: none; }
         .reveal { animation: fade .2s ease both; }
         @keyframes fade { from{opacity:0;transform:translateY(4px);} to{opacity:1;transform:none;} }
         @media (max-width: 880px){ .panes{ grid-template-columns:1fr !important; height:auto !important; }
@@ -532,16 +544,7 @@ export default function BattleClient() {
                       ? 'A blinded candidate in future battles.'
                       : `Starting from ${base?.toUpperCase()} records it as the closer of the two. Becomes a blinded candidate.`}
                   </p>
-                  <textarea
-                    autoFocus
-                    value={draft}
-                    onChange={(e) => setDraft(e.target.value)}
-                    style={{
-                      flex: 1, minHeight: 0, width: '100%', resize: 'none', padding: '14px 16px', fontFamily: serif,
-                      fontSize: 15, lineHeight: 1.6, color: t.ink, background: t.card,
-                      border: `1px solid ${t.line}`, borderRadius: 10, outline: 'none',
-                    }}
-                  />
+                  <MarkdownEditor key={base ?? 'scratch'} value={draft} onChange={setDraft} />
                   <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 10 }}>
                     <button
                       onClick={submitRewrite}

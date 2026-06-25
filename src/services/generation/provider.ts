@@ -6,6 +6,10 @@ export interface ProviderRequest {
   system: string;
   user: string;
   params: Record<string, unknown>;
+  /** 'prompt' (default) = single completion; 'skill' = provider-hosted skill/agent loop. */
+  executionMode?: 'prompt' | 'skill';
+  /** Skill folder name (manifest key), present when executionMode === 'skill'. */
+  skillRef?: string;
 }
 
 export interface ProviderResult {

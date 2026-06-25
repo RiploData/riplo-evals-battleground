@@ -10,10 +10,14 @@ const CompetitorFileSchema = z.object({
 const CompetitorVersionFileSchema = z.object({
   model_provider: z.string().min(1),
   model_identifier: z.string().min(1),
+  // 'prompt' (default) = single completion; 'skill' = provider-hosted skill loop.
+  execution_mode: z.enum(['prompt', 'skill']).optional(),
   prompt_bundle: z.object({
     system_prompt: z.string().optional(),
     system_prompt_ref: z.string().optional(),
     skills: z.array(z.string()).optional(),
+    // Skill folder name under skills/ — required when execution_mode === 'skill'.
+    skill_ref: z.string().optional(),
   }),
   model_parameters: z.record(z.unknown()),
   source_type: z.string().min(1),

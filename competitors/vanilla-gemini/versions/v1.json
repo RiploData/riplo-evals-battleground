@@ -1,0 +1,7 @@
+{
+  "model_provider": "google",
+  "model_identifier": "gemini-3.5-flash",
+  "prompt_bundle": {},
+  "model_parameters": { "max_tokens": 2048 },
+  "source_type": "manual"
+}

@@ -36,6 +36,8 @@ export interface HeadToHeadResult {
   competitors: string[];
   /** matrix[i][j] = win-count for competitor i against competitor j (ties = 0.5 each) */
   matrix: number[][];
+  /** competitor-version id → human-readable label (e.g. "vanilla-openai v1") */
+  labels: Record<string, string>;
 }
 
 export async function headToHead(rankingRunId?: string): Promise<HeadToHeadResult> {
@@ -98,7 +100,7 @@ export async function headToHead(rankingRunId?: string): Promise<HeadToHeadResul
     .where(eq(judgments.status, 'valid'));
 
   if (judgmentRows.length === 0) {
-    return { competitors: [], matrix: [] };
+    return { competitors: [], matrix: [], labels: {} };
   }
 
   // Collect all response IDs we need to look up
@@ -181,7 +183,24 @@ export async function headToHead(rankingRunId?: string): Promise<HeadToHeadResul
     // both_unacceptable / cannot_assess → skip
   }
 
-  return { competitors: competitorList, matrix };
+  // Resolve human-readable labels for each competitor version in play
+  const labels: Record<string, string> = {};
+  if (competitorList.length > 0) {
+    const labelRows = await db
+      .select({
+        cvId: competitorVersions.id,
+        version: competitorVersions.version,
+        name: competitors.name,
+      })
+      .from(competitorVersions)
+      .innerJoin(competitors, eq(competitorVersions.competitorId, competitors.id))
+      .where(inArray(competitorVersions.id, competitorList));
+    for (const r of labelRows) {
+      labels[r.cvId] = `${r.name} v${r.version}`;
+    }
+  }
+
+  return { competitors: competitorList, matrix, labels };
 }
 
 // ─────────────────────────────────────────────

@@ -9,6 +9,8 @@ import {
 import { contentHash } from '@/domain/content-hash';
 import type { GenerationProvider, ProviderRequest } from './provider';
 import { providerFor } from './providers';
+import { skillExecutorFor } from './skill-executors';
+import { loadManifest, getHandle } from '@/services/skills/manifest';
 import { composeSystemPrompt } from './master-instruction';
 
 /** Render typed source blocks (text/bullets) into a plain-text block for the prompt. */
@@ -69,11 +71,15 @@ function renderRequest(
     user = parts.join('\n\n');
   }
 
+  const executionMode = promptBundle['execution_mode'] === 'skill' ? 'skill' : 'prompt';
+
   return {
     model: modelIdentifier,
     system,
     user,
     params: modelParams,
+    executionMode,
+    skillRef: typeof promptBundle['skill_ref'] === 'string' ? promptBundle['skill_ref'] : undefined,
   };
 }
 
@@ -193,7 +199,22 @@ export async function ensureResponse(
   const startedAt = Date.now();
   let result;
   try {
-    result = await activeProvider.execute(request);
+    if (request.executionMode === 'skill') {
+      // Provider-hosted skill loop. The provider owns the sandbox; we just look up
+      // the upload handle and POST. (Injected `provider` is for prompt-mode tests.)
+      const modelProvider = competitorVersion.modelProvider;
+      if (!modelProvider) {
+        throw new Error(`Skill competitor version ${competitorVersionId} has no model_provider`);
+      }
+      if (!request.skillRef) {
+        throw new Error(`Skill competitor version ${competitorVersionId} has no skill_ref`);
+      }
+      const manifest = await loadManifest();
+      const handle = getHandle(manifest, request.skillRef, modelProvider as 'anthropic' | 'openai');
+      result = await skillExecutorFor(modelProvider).execute(request, handle);
+    } else {
+      result = await activeProvider.execute(request);
+    }
   } catch (err: unknown) {
     const latencyMs = Date.now() - startedAt;
     const errorCode =

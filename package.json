@@ -15,10 +15,13 @@
     "seed": "tsx scripts/seed.ts",
     "cases:validate": "tsx scripts/validate.ts",
     "cases:smoke": "tsx scripts/smoke.ts",
-    "seed:dev-responses": "tsx scripts/seed-dev-responses.ts"
+    "seed:dev-responses": "tsx scripts/seed-dev-responses.ts",
+    "skills:upload": "tsx scripts/skills-upload.ts",
+    "skills:dryrun": "tsx scripts/skills-dryrun.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.106.0",
+    "@google/genai": "^2.10.0",
     "@tiptap/pm": "^3.27.1",
     "@tiptap/react": "^3.27.1",
     "@tiptap/starter-kit": "^3.27.1",

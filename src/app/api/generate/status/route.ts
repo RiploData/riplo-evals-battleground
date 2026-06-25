@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireUser, requireRole, ForbiddenError } from '@/auth/workos';
-import { generationStatus } from '@/services/generate-batch';
+import { campaignCellState } from '@/services/generate-batch';
 import type { ApiError } from '@/types/contracts';
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
@@ -41,8 +41,8 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   }
 
   try {
-    const counts = await generationStatus(campaignId);
-    return NextResponse.json(counts, { status: 200 });
+    const state = await campaignCellState(campaignId);
+    return NextResponse.json(state, { status: 200 });
   } catch (err) {
     const errBody: ApiError = {
       error: {

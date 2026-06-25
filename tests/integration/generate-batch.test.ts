@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { describe, it, expect, afterAll } from 'vitest';
-import { eq, inArray } from 'drizzle-orm';
+import { eq, and, inArray } from 'drizzle-orm';
 import { db, pool } from '@/db/client';
 import {
   suites,
@@ -13,7 +13,7 @@ import {
   generationAttempts,
   responses,
 } from '@/db/schema';
-import { enqueueGeneration, generationStatus, enqueueMissingForCampaign } from '@/services/generate-batch';
+import { enqueueGeneration, campaignCellState, enqueueMissingForCampaign } from '@/services/generate-batch';
 import type { GenerationProvider, ProviderResult } from '@/services/generation/provider';
 import type { SessionUser } from '@/auth/workos';
 
@@ -130,7 +130,10 @@ async function seedCaseVersion(suiteId: string, suffix: string): Promise<string>
   return cv.id;
 }
 
-async function seedCompetitorVersion(suffix: string): Promise<string> {
+async function seedCompetitorVersion(
+  suffix: string,
+  modelIdentifier = 'fake/batch-model',
+): Promise<string> {
   const [comp] = await db
     .insert(competitors)
     .values({ name: `Batch Competitor ${suffix}`, competitorType: 'model_runner' })
@@ -142,7 +145,7 @@ async function seedCompetitorVersion(suffix: string): Promise<string> {
     .values({
       competitorId: comp.id,
       version: 1,
-      modelIdentifier: 'fake/batch-model',
+      modelIdentifier,
       promptBundleJson: { system: 'You are a helpful assistant.' },
       modelParametersJson: { temperature: 0.5 },
       contentHash: `batch-comp-hash-${suffix}`,
@@ -151,6 +154,27 @@ async function seedCompetitorVersion(suffix: string): Promise<string> {
   createdCompetitorVersionIds.push(cv.id);
 
   return cv.id;
+}
+
+// A provider that fails for one specific model identifier — used to create
+// real failed generation_attempts for a known cell.
+function makeFlakyProvider(failModel: string): GenerationProvider {
+  return {
+    async execute(req): Promise<ProviderResult> {
+      if (req.model === failModel) {
+        throw new Error(`Simulated provider failure for ${failModel}`);
+      }
+      return {
+        text: 'Batch fake response',
+        inputTokens: 8,
+        outputTokens: 4,
+        finishReason: 'stop',
+        providerRequestId: 'batch-fake-req-flaky',
+        modelReportedVersion: undefined,
+        raw: {},
+      };
+    },
+  };
 }
 
 async function seedCampaign(suiteVersionId: string, suffix: string): Promise<string> {
@@ -229,17 +253,30 @@ describe('generate-batch service integration', () => {
     }
   });
 
-  it('generationStatus reports counts by status for the campaign', async () => {
-    const { suiteId, suiteVersionId } = await seedSuiteAndVersion('status-02');
-    const caseVersionId = await seedCaseVersion(suiteId, 'status-02-c1');
-    const compVersionId = await seedCompetitorVersion('status-02-v1');
-    const campaignId = await seedCampaign(suiteVersionId, 'status-02');
+  it('campaignCellState reports ready vs missing cells (not the attempt log)', async () => {
+    const { suiteId, suiteVersionId } = await seedSuiteAndVersion('state-02');
+    const caseVersionId1 = await seedCaseVersion(suiteId, 'state-02-c1');
+    const caseVersionId2 = await seedCaseVersion(suiteId, 'state-02-c2');
+    const compVersionId = await seedCompetitorVersion('state-02-v1');
 
+    // Campaign: 2 cases × 1 competitor × 1 replicate = 2 cells total.
+    const [camp] = await db
+      .insert(campaigns)
+      .values({
+        name: 'State Campaign 02',
+        suiteVersionId,
+        eligibleCompetitorVersionIds: [compVersionId],
+        replicates: 1,
+      })
+      .returning({ id: campaigns.id });
+    createdCampaignIds.push(camp.id);
+
+    // Generate only the first case's cell → 1 ready, 1 missing.
     await enqueueGeneration(
       operatorUser,
       {
-        campaignId,
-        caseVersionIds: [caseVersionId],
+        campaignId: camp.id,
+        caseVersionIds: [caseVersionId1],
         competitorVersionIds: [compVersionId],
         replicates: 1,
       },
@@ -250,27 +287,92 @@ describe('generate-batch service integration', () => {
     const attempts = await db
       .select({ id: generationAttempts.id })
       .from(generationAttempts)
-      .where(eq(generationAttempts.campaignId, campaignId));
+      .where(eq(generationAttempts.campaignId, camp.id));
     for (const a of attempts) {
       if (!createdAttemptIds.includes(a.id)) createdAttemptIds.push(a.id);
     }
     const resps = await db
       .select({ id: responses.id })
       .from(responses)
-      .where(eq(responses.caseVersionId, caseVersionId));
+      .where(inArray(responses.caseVersionId, [caseVersionId1, caseVersionId2]));
     for (const r of resps) {
       if (!createdResponseIds.includes(r.id)) createdResponseIds.push(r.id);
     }
 
-    const status = await generationStatus(campaignId);
+    const state = await campaignCellState(camp.id);
+    expect(state.total).toBe(2);
+    expect(state.ready).toBe(1);
+    expect(state.missing).toBe(1);
+    expect(state.missingWithFailures).toBe(0); // no failures yet
+  });
 
-    // The attempt should have succeeded
-    expect(typeof status).toBe('object');
-    expect(status['succeeded']).toBeGreaterThanOrEqual(1);
+  it('campaignCellState: re-running a failing generation does NOT inflate counts', async () => {
+    const { suiteId, suiteVersionId } = await seedSuiteAndVersion('flaky-02b');
+    const caseVersionId = await seedCaseVersion(suiteId, 'flaky-02b-c1');
+    const goodCv = await seedCompetitorVersion('flaky-02b-good', 'fake/good-model');
+    const badCv = await seedCompetitorVersion('flaky-02b-bad', 'fake/bad-model');
 
-    // Total count should match number of attempts
-    const total = Object.values(status).reduce((sum, n) => sum + n, 0);
-    expect(total).toBeGreaterThanOrEqual(1);
+    // 1 case × 2 competitors × 1 replicate = 2 cells. One competitor always fails.
+    const [camp] = await db
+      .insert(campaigns)
+      .values({
+        name: 'Flaky Campaign 02b',
+        suiteVersionId,
+        eligibleCompetitorVersionIds: [goodCv, badCv],
+        replicates: 1,
+      })
+      .returning({ id: campaigns.id });
+    createdCampaignIds.push(camp.id);
+
+    const flaky = makeFlakyProvider('fake/bad-model');
+
+    // First run: good cell generated, bad cell fails.
+    await enqueueMissingForCampaign(operatorUser, camp.id, flaky);
+
+    const trackRows = async () => {
+      const a = await db
+        .select({ id: generationAttempts.id })
+        .from(generationAttempts)
+        .where(eq(generationAttempts.campaignId, camp.id));
+      for (const row of a) if (!createdAttemptIds.includes(row.id)) createdAttemptIds.push(row.id);
+      const r = await db
+        .select({ id: responses.id })
+        .from(responses)
+        .where(eq(responses.caseVersionId, caseVersionId));
+      for (const row of r) if (!createdResponseIds.includes(row.id)) createdResponseIds.push(row.id);
+    };
+    await trackRows();
+
+    const stateAfterFirst = await campaignCellState(camp.id);
+    expect(stateAfterFirst.total).toBe(2);
+    expect(stateAfterFirst.ready).toBe(1);
+    expect(stateAfterFirst.missing).toBe(1);
+    expect(stateAfterFirst.missingWithFailures).toBe(1); // the bad cell
+
+    // Count failed attempt rows after the first run.
+    const failedAfterFirst = await db
+      .select({ id: generationAttempts.id })
+      .from(generationAttempts)
+      .where(and(eq(generationAttempts.campaignId, camp.id), eq(generationAttempts.status, 'failed')));
+
+    // Second run: the bad cell fails AGAIN → another failed attempt row is logged...
+    await enqueueMissingForCampaign(operatorUser, camp.id, flaky);
+    await trackRows();
+
+    const failedAfterSecond = await db
+      .select({ id: generationAttempts.id })
+      .from(generationAttempts)
+      .where(and(eq(generationAttempts.campaignId, camp.id), eq(generationAttempts.status, 'failed')));
+
+    // ...the audit log DID grow (proving the old behavior)...
+    expect(failedAfterSecond.length).toBeGreaterThan(failedAfterFirst.length);
+
+    // ...but the cell-state report is STABLE: still 1 ready, 1 missing, 1 failing cell.
+    const stateAfterSecond = await campaignCellState(camp.id);
+    expect(stateAfterSecond.total).toBe(2);
+    expect(stateAfterSecond.ready).toBe(1);
+    expect(stateAfterSecond.missing).toBe(1);
+    expect(stateAfterSecond.missingWithFailures).toBe(1);
   });
 
   it('re-running enqueueGeneration is a no-op (cache hit, no new attempts)', async () => {
@@ -326,16 +428,12 @@ describe('generate-batch service integration', () => {
     expect(second.enqueued).toBe(1);
     expect(second.completed).toBe(1);
 
-    // No new attempts created
+    // No new attempts created — the cached response short-circuits ensureResponse.
     const attemptsAfter = await db
       .select({ id: generationAttempts.id })
       .from(generationAttempts)
       .where(eq(generationAttempts.caseVersionId, caseVersionId));
     expect(attemptsAfter.length).toBe(attemptCountBefore);
-
-    // generationStatus still reports the original succeeded count
-    const status = await generationStatus(campaignId);
-    expect(status['succeeded']).toBe(attemptCountBefore);
   });
 
   it('enqueueMissingForCampaign fills only missing cells and is idempotent', async () => {

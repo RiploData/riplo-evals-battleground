@@ -67,22 +67,198 @@ export async function enqueueGeneration(
   return { enqueued, completed };
 }
 
+export interface EligibleCells {
+  /** Latest eligible case_version id per eligible case. */
+  eligibleCaseVersionIds: string[];
+  /** Competitor_version ids whose competitor is enabled AND status='active'. */
+  eligibleCompetitorVersionIds: string[];
+  /** Replicates per cell (campaign.replicates ?? 1). */
+  replicates: number;
+}
+
 /**
- * Returns counts of generation_attempts grouped by status for the given campaign.
+ * Resolves the eligible cell matrix for a campaign: the latest eligible case
+ * version per case (isCaseEligible) × enabled+active competitor versions, plus
+ * the replicate count. This is the single source of truth for "which cells should
+ * exist", shared by the battleground, batch generation, and the status report.
+ *
+ * Returns empty arrays (replicates ≥ 1) when the campaign, suite, cases, or
+ * competitors resolve to nothing.
  */
-export async function generationStatus(campaignId: string): Promise<Record<string, number>> {
-  const rows = await db
+export async function resolveEligibleCells(campaignId: string): Promise<EligibleCells> {
+  const [campaign] = await db
+    .select()
+    .from(campaigns)
+    .where(eq(campaigns.id, campaignId))
+    .limit(1);
+
+  const replicates = campaign?.replicates ?? 1;
+  const empty: EligibleCells = {
+    eligibleCaseVersionIds: [],
+    eligibleCompetitorVersionIds: [],
+    replicates,
+  };
+
+  if (!campaign) return empty;
+
+  const rawEligibleCvIds = campaign.eligibleCompetitorVersionIds as string[];
+  if (rawEligibleCvIds.length === 0) return empty;
+
+  // Competitor versions: enabled competitor + active status.
+  const enabledCvRows = await db
+    .select({ id: competitorVersions.id })
+    .from(competitorVersions)
+    .innerJoin(competitors, eq(competitors.id, competitorVersions.competitorId))
+    .where(
+      and(
+        inArray(competitorVersions.id, rawEligibleCvIds),
+        eq(competitors.enabled, true),
+        eq(competitorVersions.status, 'active'),
+      ),
+    );
+
+  const eligibleCompetitorVersionIds = enabledCvRows.map((r) => r.id);
+  if (eligibleCompetitorVersionIds.length === 0) return empty;
+
+  // Suite → cases → latest version per case → filter by isCaseEligible.
+  const [sv] = await db
+    .select({ suiteId: suiteVersions.suiteId })
+    .from(suiteVersions)
+    .where(eq(suiteVersions.id, campaign.suiteVersionId))
+    .limit(1);
+
+  if (!sv) return empty;
+
+  const allCases = await db
     .select({
-      status: generationAttempts.status,
+      id: cases.id,
+      retiredAt: cases.retiredAt,
+      eligibleOverride: cases.eligibleOverride,
+    })
+    .from(cases)
+    .where(eq(cases.suiteId, sv.suiteId));
+
+  if (allCases.length === 0) return empty;
+
+  const caseIds = allCases.map((c) => c.id);
+
+  const allCvRows = await db
+    .select({
+      id: caseVersions.id,
+      caseId: caseVersions.caseId,
+      version: caseVersions.version,
+      datasetSplit: caseVersions.datasetSplit,
+    })
+    .from(caseVersions)
+    .where(inArray(caseVersions.caseId, caseIds));
+
+  const latestByCaseId = new Map<string, (typeof allCvRows)[0]>();
+  for (const cv of allCvRows) {
+    const existing = latestByCaseId.get(cv.caseId);
+    if (!existing || cv.version > existing.version) {
+      latestByCaseId.set(cv.caseId, cv);
+    }
+  }
+
+  const eligibleCaseVersionIds = allCases
+    .map((c) => {
+      const latestCv = latestByCaseId.get(c.id);
+      if (!latestCv) return null;
+      if (
+        !isCaseEligible({
+          retiredAt: c.retiredAt,
+          eligibleOverride: c.eligibleOverride,
+          latestSplit: latestCv.datasetSplit,
+        })
+      ) {
+        return null;
+      }
+      return latestCv.id;
+    })
+    .filter((id): id is string => id !== null);
+
+  return { eligibleCaseVersionIds, eligibleCompetitorVersionIds, replicates };
+}
+
+export interface CampaignCellState {
+  /** Eligible cells: cases × competitors × replicates. */
+  total: number;
+  /** Cells with a cached model_generation response (serveable in the battleground). */
+  ready: number;
+  /** Cells with no cached response yet (total − ready). */
+  missing: number;
+  /** Missing cells that have ≥1 failed generation attempt — the genuinely-broken ones. */
+  missingWithFailures: number;
+}
+
+function cellTriple(caseVersionId: string, competitorVersionId: string, replicateIndex: number): string {
+  return `${caseVersionId}|${competitorVersionId}|${replicateIndex}`;
+}
+
+/**
+ * Reports the CURRENT state of a campaign's eligible cells, by distinct cell —
+ * not the historical generation_attempts log. Re-running generation on a fixed set
+ * of broken cells leaves these counts stable (the attempt log still grows, but it's
+ * no longer surfaced as if it were current state).
+ */
+export async function campaignCellState(campaignId: string): Promise<CampaignCellState> {
+  const { eligibleCaseVersionIds, eligibleCompetitorVersionIds, replicates } =
+    await resolveEligibleCells(campaignId);
+
+  const total = eligibleCaseVersionIds.length * eligibleCompetitorVersionIds.length * replicates;
+  if (total === 0) {
+    return { total: 0, ready: 0, missing: 0, missingWithFailures: 0 };
+  }
+
+  // Ready cells: one model_generation response per (case, competitor, replicate).
+  const readyRows = await db
+    .select({
+      caseVersionId: responses.caseVersionId,
+      competitorVersionId: responses.competitorVersionId,
+      replicateIndex: responses.replicateIndex,
+    })
+    .from(responses)
+    .where(
+      and(
+        inArray(responses.caseVersionId, eligibleCaseVersionIds),
+        inArray(responses.competitorVersionId, eligibleCompetitorVersionIds),
+        eq(responses.originType, 'model_generation'),
+      ),
+    );
+
+  const readySet = new Set<string>();
+  for (const r of readyRows) {
+    if (!r.competitorVersionId || r.replicateIndex >= replicates) continue;
+    readySet.add(cellTriple(r.caseVersionId, r.competitorVersionId, r.replicateIndex));
+  }
+  const ready = readySet.size;
+  const missing = total - ready;
+
+  // Missing cells that have logged a failure: distinct failing cells, not attempt rows.
+  const failedRows = await db
+    .select({
+      caseVersionId: generationAttempts.caseVersionId,
+      competitorVersionId: generationAttempts.competitorVersionId,
+      replicateIndex: generationAttempts.replicateIndex,
     })
     .from(generationAttempts)
-    .where(eq(generationAttempts.campaignId, campaignId));
+    .where(
+      and(
+        eq(generationAttempts.campaignId, campaignId),
+        eq(generationAttempts.status, 'failed'),
+        inArray(generationAttempts.caseVersionId, eligibleCaseVersionIds),
+        inArray(generationAttempts.competitorVersionId, eligibleCompetitorVersionIds),
+      ),
+    );
 
-  const counts: Record<string, number> = {};
-  for (const row of rows) {
-    counts[row.status] = (counts[row.status] ?? 0) + 1;
+  const failingMissing = new Set<string>();
+  for (const r of failedRows) {
+    if (r.replicateIndex >= replicates) continue;
+    const key = cellTriple(r.caseVersionId, r.competitorVersionId, r.replicateIndex);
+    if (!readySet.has(key)) failingMissing.add(key);
   }
-  return counts;
+
+  return { total, ready, missing, missingWithFailures: failingMissing.size };
 }
 
 // ── Bounded concurrency helper ────────────────────────────────────────────────
@@ -142,106 +318,12 @@ export async function enqueueMissingForCampaign(
 ): Promise<EnqueueMissingResult> {
   const deadlineAt = Date.now() + (opts?.deadlineMs ?? 40_000);
   const concurrency = opts?.concurrency ?? 6;
-  // 1. Load campaign
-  const [campaign] = await db
-    .select()
-    .from(campaigns)
-    .where(eq(campaigns.id, campaignId))
-    .limit(1);
 
-  if (!campaign) {
-    throw new Error(`Campaign not found: ${campaignId}`);
-  }
+  // 1-3. Resolve the eligible cell matrix (cases × competitors × replicates).
+  const { eligibleCaseVersionIds, eligibleCompetitorVersionIds: eligibleCvIds, replicates } =
+    await resolveEligibleCells(campaignId);
 
-  const rawEligibleCvIds = campaign.eligibleCompetitorVersionIds as string[];
-  const replicates = campaign.replicates ?? 1;
-
-  if (rawEligibleCvIds.length === 0) {
-    return { generated: 0, skipped: 0, failed: 0, total: 0, remaining: 0 };
-  }
-
-  // 2. Filter competitor versions: enabled competitor + active status
-  const enabledCvRows = await db
-    .select({ id: competitorVersions.id })
-    .from(competitorVersions)
-    .innerJoin(competitors, eq(competitors.id, competitorVersions.competitorId))
-    .where(
-      and(
-        inArray(competitorVersions.id, rawEligibleCvIds),
-        eq(competitors.enabled, true),
-        eq(competitorVersions.status, 'active'),
-      ),
-    );
-
-  const eligibleCvIds = enabledCvRows.map(r => r.id);
-
-  if (eligibleCvIds.length === 0) {
-    return { generated: 0, skipped: 0, failed: 0, total: 0, remaining: 0 };
-  }
-
-  // 3. Resolve eligible case versions
-  const [sv] = await db
-    .select({ suiteId: suiteVersions.suiteId })
-    .from(suiteVersions)
-    .where(eq(suiteVersions.id, campaign.suiteVersionId))
-    .limit(1);
-
-  if (!sv) {
-    return { generated: 0, skipped: 0, failed: 0, total: 0, remaining: 0 };
-  }
-
-  const allCases = await db
-    .select({
-      id: cases.id,
-      retiredAt: cases.retiredAt,
-      eligibleOverride: cases.eligibleOverride,
-    })
-    .from(cases)
-    .where(eq(cases.suiteId, sv.suiteId));
-
-  if (allCases.length === 0) {
-    return { generated: 0, skipped: 0, failed: 0, total: 0, remaining: 0 };
-  }
-
-  const caseIds = allCases.map(c => c.id);
-
-  const allCvRows = await db
-    .select({
-      id: caseVersions.id,
-      caseId: caseVersions.caseId,
-      version: caseVersions.version,
-      datasetSplit: caseVersions.datasetSplit,
-    })
-    .from(caseVersions)
-    .where(inArray(caseVersions.caseId, caseIds));
-
-  // Find latest version per case
-  const latestByCaseId = new Map<string, (typeof allCvRows)[0]>();
-  for (const cv of allCvRows) {
-    const existing = latestByCaseId.get(cv.caseId);
-    if (!existing || cv.version > existing.version) {
-      latestByCaseId.set(cv.caseId, cv);
-    }
-  }
-
-  const eligibleCaseVersionIds = allCases
-    .map(c => {
-      const latestCv = latestByCaseId.get(c.id);
-      if (!latestCv) return null;
-      if (
-        !isCaseEligible({
-          retiredAt: c.retiredAt,
-          eligibleOverride: c.eligibleOverride,
-          latestSplit: latestCv.datasetSplit,
-        })
-      ) {
-        return null;
-      }
-      return latestCv.id;
-    })
-    .filter((id): id is string => id !== null);
-
-  if (eligibleCaseVersionIds.length === 0) {
+  if (eligibleCaseVersionIds.length === 0 || eligibleCvIds.length === 0) {
     return { generated: 0, skipped: 0, failed: 0, total: 0, remaining: 0 };
   }
 

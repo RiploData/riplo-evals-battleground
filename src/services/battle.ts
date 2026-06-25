@@ -11,27 +11,27 @@ import {
   comparisons,
   assignments,
 } from '@/db/schema';
-import { selectPair, pairKey } from '@/domain/matchmaking';
-import { ensureResponse } from '@/services/generation/runner';
+import { selectPair, pairKey, cellKey } from '@/domain/matchmaking';
 import { toBlindedOptions } from '@/domain/blinding';
 import { isCaseEligible } from '@/domain/eligibility';
 import type { SessionUser } from '@/auth/workos';
 import type { BattlePayload, BattleTask, OutputSpec, SourceBlock } from '@/types/contracts';
-import type { GenerationProvider } from '@/services/generation/provider';
 
 export interface GetNextBattleOpts {
-  provider?: GenerationProvider;
   rng?: () => number;
 }
 
 /**
- * Loads the single active (default) campaign, picks an unseen pair for the user,
- * ensures responses exist for both cells, persists a comparison + assignment with
- * a randomly-chosen server-recorded left/right order, and returns a blinded payload.
+ * Loads the single active (default) campaign, picks an unseen pair for the user
+ * from cells that ALREADY have a precomputed response, persists a comparison +
+ * assignment with a randomly-chosen server-recorded left/right order, and returns
+ * a blinded payload.
  *
- * Returns null when every eligible pair has already been seen by this user.
+ * The battleground is read-only over precomputed cells: it never generates responses
+ * at view time. Cells are produced ahead of time via the admin "Generate missing"
+ * actions. When no eligible pair has both cells precomputed (and unseen), returns null.
  *
- * Injectable `provider` and `rng` make the function deterministic in tests.
+ * Injectable `rng` makes the function deterministic in tests.
  *
  * Eligibility: only cases where isCaseEligible({ retiredAt, eligibleOverride, latestSplit })
  * are considered. Only competitor versions whose competitor is enabled AND status='active'
@@ -41,7 +41,6 @@ export async function getNextBattle(
   user: SessionUser,
   opts?: GetNextBattleOpts,
 ): Promise<BattlePayload | null> {
-  const provider = opts?.provider;
   const rng = opts?.rng ?? Math.random;
 
   // 1. Load the single active campaign (most recently started, no end date).
@@ -227,51 +226,66 @@ export async function getNextBattle(
     }
   }
 
-  // 6 + 7. Select a pair and ensure both responses exist. Generation can fail for
-  // a specific cell — a skill handle not yet registered, a provider 503, a model
-  // that's down — and that must not 500 the whole battle request. On failure we
-  // exclude that pairing (via seenByUser, whose key is order-independent) and try
-  // another pair, up to a small bound; if none can be served, return null (→ 204).
-  const MAX_PAIR_ATTEMPTS = 5;
-  let pair: ReturnType<typeof selectPair> = null;
-  let respA: { responseId: string } | undefined;
-  let respB: { responseId: string } | undefined;
+  // 6. Build the precomputed-cell map: only cells with a cached model_generation
+  //    response (replicate 0) can be served. The battleground never generates at
+  //    view time — missing cells are simply not offered.
+  const eligibleCaseVersionIds = finalCaseVersions.map(cv => cv.id);
+  const precomputedRows = await db
+    .select({
+      caseVersionId: responses.caseVersionId,
+      competitorVersionId: responses.competitorVersionId,
+      responseId: responses.id,
+    })
+    .from(responses)
+    .where(
+      and(
+        inArray(responses.caseVersionId, eligibleCaseVersionIds),
+        inArray(responses.competitorVersionId, eligibleCompetitorVersionIds),
+        eq(responses.replicateIndex, 0),
+        eq(responses.originType, 'model_generation'),
+      ),
+    );
 
-  for (let attempt = 0; attempt < MAX_PAIR_ATTEMPTS; attempt++) {
-    const candidate = selectPair({
-      cases: finalCaseVersions.map(cv => ({ caseVersionId: cv.id, tags: cv.tags as string[] })),
-      eligibleCompetitorVersionIds,
-      existingPairCounts,
-      seenByUser,
-      rng,
-    });
-    if (candidate === null) break;
-
-    try {
-      [respA, respB] = await Promise.all([
-        ensureResponse(candidate.caseVersionId, candidate.competitorA, 0, campaign.id, provider),
-        ensureResponse(candidate.caseVersionId, candidate.competitorB, 0, campaign.id, provider),
-      ]);
-      pair = candidate;
-      break;
-    } catch {
-      // Couldn't generate this pairing right now — skip it and try a different one.
-      seenByUser.add(pairKey(candidate.caseVersionId, candidate.competitorA, candidate.competitorB));
-    }
+  const precomputedCells = new Set<string>();
+  const responseIdByCell = new Map<string, string>();
+  for (const row of precomputedRows) {
+    if (!row.competitorVersionId) continue;
+    const key = cellKey(row.caseVersionId, row.competitorVersionId);
+    precomputedCells.add(key);
+    responseIdByCell.set(key, row.responseId);
   }
 
-  if (pair === null || !respA || !respB) {
+  // 7. Select a pair restricted to precomputed cells. A selected pair is guaranteed
+  //    to have both responses cached, so we can look them up directly.
+  const pair = selectPair({
+    cases: finalCaseVersions.map(cv => ({ caseVersionId: cv.id, tags: cv.tags as string[] })),
+    eligibleCompetitorVersionIds,
+    existingPairCounts,
+    seenByUser,
+    precomputedCells,
+    rng,
+  });
+
+  if (pair === null) {
     return null;
+  }
+
+  const respAId = responseIdByCell.get(cellKey(pair.caseVersionId, pair.competitorA));
+  const respBId = responseIdByCell.get(cellKey(pair.caseVersionId, pair.competitorB));
+
+  if (!respAId || !respBId) {
+    // Should not happen: selectPair only returns precomputed pairs.
+    throw new Error('Selected pair missing a precomputed response');
   }
 
   // 8. Fetch the response rows (for blinding).
   const [responseRowA, responseRowB] = await Promise.all([
-    db.select().from(responses).where(eq(responses.id, respA.responseId)).limit(1),
-    db.select().from(responses).where(eq(responses.id, respB.responseId)).limit(1),
+    db.select().from(responses).where(eq(responses.id, respAId)).limit(1),
+    db.select().from(responses).where(eq(responses.id, respBId)).limit(1),
   ]);
 
   if (!responseRowA[0] || !responseRowB[0]) {
-    throw new Error('Response rows missing after ensureResponse');
+    throw new Error('Response rows missing for precomputed cell');
   }
 
   // 9. Create a comparison row.
@@ -280,8 +294,8 @@ export async function getNextBattle(
     .values({
       campaignId: campaign.id,
       caseVersionId: pair.caseVersionId,
-      responseOneId: respA.responseId,
-      responseTwoId: respB.responseId,
+      responseOneId: respAId,
+      responseTwoId: respBId,
       matchmakingStrategy: 'coverage',
     })
     .returning({ id: comparisons.id });

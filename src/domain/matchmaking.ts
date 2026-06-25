@@ -14,6 +14,13 @@ export interface MatchmakingInput {
   eligibleCompetitorVersionIds: string[];
   existingPairCounts: Record<string, number>; // key `${caseVersionId}|${a}|${b}` (a<b sorted)
   seenByUser: Set<string>;                     // keys already shown to this user
+  /**
+   * Cells (caseVersionId × competitorVersionId) that have a precomputed response,
+   * keyed via cellKey(). When provided, only pairs where BOTH cells are present are
+   * eligible — the battleground never generates responses at view time. When omitted,
+   * no precomputed filtering is applied (back-compat for callers/tests that don't gate).
+   */
+  precomputedCells?: Set<string>;
   rng: () => number;                           // injectable for determinism
 }
 
@@ -24,6 +31,14 @@ export interface MatchmakingInput {
 export function pairKey(caseVersionId: string, a: string, b: string): string {
   const [first, second] = a <= b ? [a, b] : [b, a];
   return `${caseVersionId}|${first}|${second}`;
+}
+
+/**
+ * Returns a stable key for a single (case × competitor) cell. Used to test whether
+ * a cell has a precomputed response.
+ */
+export function cellKey(caseVersionId: string, competitorVersionId: string): string {
+  return `${caseVersionId}|${competitorVersionId}`;
 }
 
 /**
@@ -68,7 +83,7 @@ function tagCoverage(
  * - Return null when every eligible pair has been seen by this user
  */
 export function selectPair(input: MatchmakingInput): PairCandidate | null {
-  const { cases, eligibleCompetitorVersionIds, existingPairCounts, seenByUser, rng } = input;
+  const { cases, eligibleCompetitorVersionIds, existingPairCounts, seenByUser, precomputedCells, rng } = input;
 
   if (cases.length === 0 || eligibleCompetitorVersionIds.length < 2) {
     return null;
@@ -119,6 +134,15 @@ export function selectPair(input: MatchmakingInput): PairCandidate | null {
     for (const [a, b] of pairs) {
       const key = pairKey(c.caseVersionId, a, b);
       if (seenByUser.has(key)) continue;
+      // Read-only battleground: never offer a pair whose cells aren't already
+      // generated. Both cells must have a precomputed response.
+      if (
+        precomputedCells &&
+        (!precomputedCells.has(cellKey(c.caseVersionId, a)) ||
+          !precomputedCells.has(cellKey(c.caseVersionId, b)))
+      ) {
+        continue;
+      }
       const count = existingPairCounts[key] ?? 0;
       candidates.push({ caseVersionId: c.caseVersionId, a, b, count, tagWeight });
     }

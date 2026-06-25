@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { selectPair, pairKey } from '@/domain/matchmaking';
+import { selectPair, pairKey, cellKey } from '@/domain/matchmaking';
 import type { MatchmakingInput } from '@/domain/matchmaking';
 
 // Deterministic seeded RNG using xorshift32 for tests — wide distribution across seeds
@@ -235,6 +235,83 @@ describe('selectPair — tag balancing', () => {
     // Must select the UNDER-covered case, not the over-covered one.
     // If tag weighting is removed, c_math_a (listed first) would be selected instead.
     expect(result.caseVersionId).toBe('c_writing');
+  });
+});
+
+describe('cellKey', () => {
+  it('combines case and competitor ids into a stable key', () => {
+    expect(cellKey('c1', 'x')).toBe('c1|x');
+  });
+
+  it('produces different keys for different competitors', () => {
+    expect(cellKey('c1', 'x')).not.toBe(cellKey('c1', 'y'));
+  });
+});
+
+describe('selectPair — precomputed-cell filtering', () => {
+  it('only returns a pair where BOTH cells are precomputed', () => {
+    // Competitors [x,y,z] → pairs (x,y),(x,z),(y,z). Only x and y are precomputed,
+    // so the only serveable pair is (x,y).
+    const input: MatchmakingInput = {
+      cases: [{ caseVersionId: 'c1', tags: ['tag1'] }],
+      eligibleCompetitorVersionIds: ['x', 'y', 'z'],
+      existingPairCounts: {},
+      seenByUser: new Set(),
+      precomputedCells: new Set([cellKey('c1', 'x'), cellKey('c1', 'y')]),
+      rng: makeSeededRng(42),
+    };
+    const result = selectPair(input);
+    expect(result).not.toBeNull();
+    if (result === null) return;
+    expect(pairKey(result.caseVersionId, result.competitorA, result.competitorB))
+      .toBe(pairKey('c1', 'x', 'y'));
+  });
+
+  it('returns null when no pair has both cells precomputed', () => {
+    // Only x is precomputed → no pair can be formed.
+    const input: MatchmakingInput = {
+      cases: [{ caseVersionId: 'c1', tags: ['tag1'] }],
+      eligibleCompetitorVersionIds: ['x', 'y', 'z'],
+      existingPairCounts: {},
+      seenByUser: new Set(),
+      precomputedCells: new Set([cellKey('c1', 'x')]),
+      rng: makeSeededRng(42),
+    };
+    expect(selectPair(input)).toBeNull();
+  });
+
+  it('excludes a case whose cells are not precomputed even when another case is fully precomputed', () => {
+    // c1 fully precomputed; c2 not precomputed at all → only c1 pairs are serveable.
+    const input: MatchmakingInput = {
+      cases: [
+        { caseVersionId: 'c1', tags: ['tag1'] },
+        { caseVersionId: 'c2', tags: ['tag1'] },
+      ],
+      eligibleCompetitorVersionIds: ['x', 'y'],
+      existingPairCounts: {},
+      seenByUser: new Set(),
+      precomputedCells: new Set([cellKey('c1', 'x'), cellKey('c1', 'y')]),
+      rng: makeSeededRng(42),
+    };
+    const result = selectPair(input);
+    expect(result).not.toBeNull();
+    if (result === null) return;
+    expect(result.caseVersionId).toBe('c1');
+  });
+
+  it('behaves as before when precomputedCells is omitted (back-compat)', () => {
+    const input: MatchmakingInput = {
+      cases: [{ caseVersionId: 'c1', tags: ['tag1'] }],
+      eligibleCompetitorVersionIds: ['x', 'y'],
+      existingPairCounts: {},
+      seenByUser: new Set(),
+      rng: makeSeededRng(42),
+    };
+    const result = selectPair(input);
+    expect(result).not.toBeNull();
+    if (result === null) return;
+    expect(pairKey(result.caseVersionId, result.competitorA, result.competitorB))
+      .toBe(pairKey('c1', 'x', 'y'));
   });
 });
 

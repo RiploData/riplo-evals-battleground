@@ -90,10 +90,14 @@ export async function generationStatus(campaignId: string): Promise<Record<strin
 async function runWithConcurrency(
   tasks: (() => Promise<void>)[],
   limit: number,
+  deadlineAt?: number,
 ): Promise<void> {
   let index = 0;
   async function worker(): Promise<void> {
     while (index < tasks.length) {
+      // Stop launching new cells once the time budget is exhausted (the caller
+      // returns `remaining` so the client can resume with another request).
+      if (deadlineAt !== undefined && Date.now() >= deadlineAt) return;
       const i = index++;
       await tasks[i]();
     }
@@ -107,6 +111,15 @@ export interface EnqueueMissingResult {
   skipped: number;
   failed: number;
   total: number;
+  /** Cells still missing a response after this call (call again to continue). */
+  remaining: number;
+}
+
+export interface EnqueueMissingOpts {
+  /** Stop launching new cells after this many ms (default 40s, to fit a 60s function limit). */
+  deadlineMs?: number;
+  /** Max cells in flight (default 6). */
+  concurrency?: number;
 }
 
 /**
@@ -125,7 +138,10 @@ export async function enqueueMissingForCampaign(
   _user: SessionUser,
   campaignId: string,
   provider?: GenerationProvider,
+  opts?: EnqueueMissingOpts,
 ): Promise<EnqueueMissingResult> {
+  const deadlineAt = Date.now() + (opts?.deadlineMs ?? 40_000);
+  const concurrency = opts?.concurrency ?? 6;
   // 1. Load campaign
   const [campaign] = await db
     .select()
@@ -141,7 +157,7 @@ export async function enqueueMissingForCampaign(
   const replicates = campaign.replicates ?? 1;
 
   if (rawEligibleCvIds.length === 0) {
-    return { generated: 0, skipped: 0, failed: 0, total: 0 };
+    return { generated: 0, skipped: 0, failed: 0, total: 0, remaining: 0 };
   }
 
   // 2. Filter competitor versions: enabled competitor + active status
@@ -160,7 +176,7 @@ export async function enqueueMissingForCampaign(
   const eligibleCvIds = enabledCvRows.map(r => r.id);
 
   if (eligibleCvIds.length === 0) {
-    return { generated: 0, skipped: 0, failed: 0, total: 0 };
+    return { generated: 0, skipped: 0, failed: 0, total: 0, remaining: 0 };
   }
 
   // 3. Resolve eligible case versions
@@ -171,7 +187,7 @@ export async function enqueueMissingForCampaign(
     .limit(1);
 
   if (!sv) {
-    return { generated: 0, skipped: 0, failed: 0, total: 0 };
+    return { generated: 0, skipped: 0, failed: 0, total: 0, remaining: 0 };
   }
 
   const allCases = await db
@@ -184,7 +200,7 @@ export async function enqueueMissingForCampaign(
     .where(eq(cases.suiteId, sv.suiteId));
 
   if (allCases.length === 0) {
-    return { generated: 0, skipped: 0, failed: 0, total: 0 };
+    return { generated: 0, skipped: 0, failed: 0, total: 0, remaining: 0 };
   }
 
   const caseIds = allCases.map(c => c.id);
@@ -226,7 +242,7 @@ export async function enqueueMissingForCampaign(
     .filter((id): id is string => id !== null);
 
   if (eligibleCaseVersionIds.length === 0) {
-    return { generated: 0, skipped: 0, failed: 0, total: 0 };
+    return { generated: 0, skipped: 0, failed: 0, total: 0, remaining: 0 };
   }
 
   // 4. Build cell list
@@ -280,7 +296,9 @@ export async function enqueueMissingForCampaign(
     }
   });
 
-  await runWithConcurrency(tasks, 4);
+  await runWithConcurrency(tasks, concurrency, deadlineAt);
 
-  return { generated, skipped, failed, total };
+  // Cells still missing after this call (unreached due to the time budget, or failed).
+  const remaining = total - skipped - generated;
+  return { generated, skipped, failed, total, remaining };
 }

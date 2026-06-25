@@ -1,0 +1,47 @@
+{
+  "kind": "judgment",
+  "suite": "Riplo Consulting v1",
+  "dataset_split": "dev",
+  "title": "Calibrate confidence on the Halden claims",
+  "guidance": "Reward calibration that varies with the strength of the evidence and reads cleanly as a table. Penalise blanket confidence or uncalibrated ratings.",
+  "output_spec": {
+    "target": "Confidence table",
+    "parts": [
+      {
+        "type": "table",
+        "label": "Calibration",
+        "note": "Claim | Confidence | Rationale"
+      }
+    ]
+  },
+  "runner_input": {
+    "instruction": "Rate the confidence of each claim/assumption below and give a one-line rationale.",
+    "constraints": "Output: a markdown table with exactly these columns: Claim | Confidence | Rationale."
+  },
+  "source_blocks": [
+    {
+      "type": "bullets",
+      "items": [
+        "Claim A: The moat is institutional and hard to replicate. Evidence: 28-yr IFSM endorsement, BRCGS recognition, 14 integrations (strong).",
+        "Claim B: No funded UK food-safety-standards startup exists. Evidence: Crunchbase/Pitchbook, May 2026 (strong but point-in-time).",
+        "Claim C: AutoSchedule cross-sell hits the plan. Evidence: 4 months of data, £140k (thin).",
+        "Claim D: QMS-vendor sideways entry is unlikely. Evidence: vendor incentives; integration-contract terms unverified (contested)."
+      ]
+    }
+  ],
+  "hidden_metadata": {
+    "domain": "pe-diligence",
+    "difficulty": "medium",
+    "failure_modes": [
+      "all High/'likely'",
+      "ignores evidence strength"
+    ]
+  },
+  "tags": [
+    "pe-diligence",
+    "calibration"
+  ],
+  "rubric_notes": [
+    "A=High, B=High (point-in-time caveat), C=Low (4 months), D=Medium. Reject C or D rated High."
+  ]
+}

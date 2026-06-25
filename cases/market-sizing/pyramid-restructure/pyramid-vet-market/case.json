@@ -1,0 +1,48 @@
+{
+  "kind": "pyramid-restructure",
+  "suite": "Riplo Consulting v1",
+  "dataset_split": "dev",
+  "title": "Restructure the vet-market note answer-first",
+  "guidance": "Reward an answer-first structure with clean, well-nested bullets. Penalise keeping the build-up or burying the recommendation.",
+  "output_spec": {
+    "target": "Restructured note",
+    "parts": [
+      {
+        "type": "title",
+        "label": "Recommendation",
+        "note": "bold first line"
+      },
+      {
+        "type": "bullets",
+        "label": "Nested support",
+        "note": "claims + indented evidence"
+      }
+    ]
+  },
+  "runner_input": {
+    "instruction": "Restructure the note below so the recommendation leads, then the supporting arguments with their evidence.",
+    "constraints": "Output: markdown — a bold recommendation on the first line, then nested bullets (top-level claims, with evidence indented beneath each)."
+  },
+  "source_blocks": [
+    {
+      "type": "text",
+      "text": "There are ~5,300 practices, ~70% already on software, a £271m SAM growing 9%. The incumbents are on-premise with NPS ~12 and no recent release. A 2025 RCVS digital-record guideline raises the compliance bar. So the market is both sizeable and displaceable, and a cloud-native entrant with a compliance angle can win. Therefore we should back the cloud challenger."
+    }
+  ],
+  "hidden_metadata": {
+    "domain": "market-sizing",
+    "difficulty": "medium",
+    "failure_modes": [
+      "conclusion last",
+      "flat list"
+    ]
+  },
+  "tags": [
+    "market-sizing",
+    "structure"
+  ],
+  "rubric_notes": [
+    "Line 1: back the cloud challenger — market is sizeable and displaceable.",
+    "Nest: SAM/growth; stale incumbents; 2025 guideline."
+  ]
+}

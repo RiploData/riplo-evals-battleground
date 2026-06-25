@@ -1,0 +1,47 @@
+{
+  "kind": "judgment",
+  "suite": "Riplo Consulting v1",
+  "dataset_split": "dev",
+  "title": "Calibrate confidence on the vet-sizing assumptions",
+  "guidance": "Reward calibration that varies with the strength of the evidence and reads cleanly as a table. Penalise blanket confidence or uncalibrated ratings.",
+  "output_spec": {
+    "target": "Confidence table",
+    "parts": [
+      {
+        "type": "table",
+        "label": "Calibration",
+        "note": "Claim | Confidence | Rationale"
+      }
+    ]
+  },
+  "runner_input": {
+    "instruction": "Rate the confidence of each claim/assumption below and give a one-line rationale.",
+    "constraints": "Output: a markdown table with exactly these columns: Claim | Confidence | Rationale."
+  },
+  "source_blocks": [
+    {
+      "type": "bullets",
+      "items": [
+        "Assumption A: ~70% software penetration. Evidence: RCVS practice data (strong).",
+        "Assumption B: £51k average ACV. Evidence: comparable products £45–55k (medium).",
+        "Assumption C: 9% growth sustains 5 years. Evidence: extrapolated from 2 years (thin).",
+        "Assumption D: incumbents won't respond. Evidence: they hold the base but lack the product (contested)."
+      ]
+    }
+  ],
+  "hidden_metadata": {
+    "domain": "market-sizing",
+    "difficulty": "medium",
+    "failure_modes": [
+      "uniform ratings",
+      "no rationale variance"
+    ]
+  },
+  "tags": [
+    "market-sizing",
+    "calibration"
+  ],
+  "rubric_notes": [
+    "A=High, B=Medium, C=Low (extrapolated), D=Contested/Medium."
+  ]
+}

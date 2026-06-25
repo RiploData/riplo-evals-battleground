@@ -1,0 +1,59 @@
+{
+  "kind": "compression",
+  "suite": "Riplo Consulting v1",
+  "dataset_split": "dev",
+  "title": "Compress the vet sizing to a memo market section",
+  "guidance": "Reward the version that leads with the answer and would help a partner reach a call; tone should read partner-grade. Penalise even coverage with no verdict.",
+  "output_spec": {
+    "target": "IC one-pager",
+    "parts": [
+      {
+        "type": "title",
+        "label": "Headline",
+        "note": "one bold line, states the call"
+      },
+      {
+        "type": "bullets",
+        "label": "Supporting points",
+        "note": "3 bullets"
+      }
+    ]
+  },
+  "runner_input": {
+    "instruction": "Compress the sizing into the market section of an investment memo. Connect the number to a thesis.",
+    "constraints": "Output: markdown — one bold title line, then exactly three bullets."
+  },
+  "source_blocks": [
+    {
+      "type": "text",
+      "text": "UK independent veterinary practice management software. RCVS practice counts. Synthetic."
+    },
+    {
+      "type": "bullets",
+      "items": [
+        "~5,300 independent/small-group practices; ~70% (3,710) on dedicated software",
+        "Current dedicated SAM ~£190m (3,710 × ~£51k ACV)",
+        "Greenfield (switchers) ~£81m; total SAM ~£271m, growing ~9% YoY",
+        "Incumbents: 2 legacy vendors ~60% share, on-premise, last major release 4+ yrs ago, NPS ~12",
+        "Tailwind: cloud + 2025 RCVS digital clinical-record guideline + pet-insurance APIs lower switching cost"
+      ]
+    }
+  ],
+  "hidden_metadata": {
+    "domain": "market-sizing",
+    "difficulty": "medium",
+    "failure_modes": [
+      "restates methodology",
+      "leads with TAM not SAM",
+      "no wedge"
+    ]
+  },
+  "tags": [
+    "market-sizing",
+    "one-pager"
+  ],
+  "rubric_notes": [
+    "Thesis: £271m SAM, stale on-premise incumbents, 2025 RCVS guideline lowers switching cost.",
+    "Wedge is the guideline + cloud, not size alone."
+  ]
+}

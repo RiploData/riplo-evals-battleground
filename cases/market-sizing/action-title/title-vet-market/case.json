@@ -1,0 +1,52 @@
+{
+  "kind": "action-title",
+  "suite": "Riplo Consulting v1",
+  "dataset_split": "dev",
+  "title": "Title the vet-market slide",
+  "guidance": "Reward a title that states the takeaway as a claim and reads like an MBB action title. Penalise topic labels or anything unsupported by the body.",
+  "output_spec": {
+    "target": "Slide title",
+    "parts": [
+      {
+        "type": "title",
+        "label": "Title",
+        "note": "single line, no body"
+      }
+    ]
+  },
+  "runner_input": {
+    "instruction": "Write the slide title as the takeaway of the body below.",
+    "constraints": "Output: a single title line only. No body, no bullets, no colon-subtitle."
+  },
+  "source_blocks": [
+    {
+      "type": "text",
+      "text": "Working title: 'Market size'"
+    },
+    {
+      "type": "bullets",
+      "items": [
+        "~5,300 independent/small-group practices; ~70% (3,710) on dedicated software",
+        "Current dedicated SAM ~£190m (3,710 × ~£51k ACV)",
+        "Greenfield (switchers) ~£81m; total SAM ~£271m, growing ~9% YoY",
+        "Incumbents: 2 legacy vendors ~60% share, on-premise, last major release 4+ yrs ago, NPS ~12",
+        "Tailwind: cloud + 2025 RCVS digital clinical-record guideline + pet-insurance APIs lower switching cost"
+      ]
+    }
+  ],
+  "hidden_metadata": {
+    "domain": "market-sizing",
+    "difficulty": "easy",
+    "failure_modes": [
+      "label title",
+      "restates the axis"
+    ]
+  },
+  "tags": [
+    "market-sizing",
+    "title"
+  ],
+  "rubric_notes": [
+    "Should say the market is big and displaceable."
+  ]
+}

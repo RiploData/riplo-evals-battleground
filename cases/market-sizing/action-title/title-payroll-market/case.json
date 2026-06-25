@@ -1,0 +1,52 @@
+{
+  "kind": "action-title",
+  "suite": "Riplo Consulting v1",
+  "dataset_split": "dev",
+  "title": "Title the payroll-market slide",
+  "guidance": "Reward a title that states the takeaway as a claim and reads like an MBB action title. Penalise topic labels or anything unsupported by the body.",
+  "output_spec": {
+    "target": "Slide title",
+    "parts": [
+      {
+        "type": "title",
+        "label": "Title",
+        "note": "single line, no body"
+      }
+    ]
+  },
+  "runner_input": {
+    "instruction": "Write the slide title as the takeaway of the body below.",
+    "constraints": "Output: a single title line only. No body, no bullets, no colon-subtitle."
+  },
+  "source_blocks": [
+    {
+      "type": "text",
+      "text": "Working title: 'Payroll TAM'"
+    },
+    {
+      "type": "bullets",
+      "items": [
+        "1.4m businesses with 5–249 employees; ~60% (840k) on dedicated payroll software",
+        "Dedicated SAM ~£1.1bn (840k × £1.3k ACV); greenfield (manual switchers) ~£730m; total SAM ~£1.8bn",
+        "Growing ~11% YoY (auto-enrolment complexity, IR35 enforcement, RTI upgrades)",
+        "Incumbents: 2 legacy players 55% share, no major update in 3+ yrs, NPS ~18",
+        "Tailwind: open banking + HMRC API modernisation (2025) lower the build cost for challengers"
+      ]
+    }
+  ],
+  "hidden_metadata": {
+    "domain": "market-sizing",
+    "difficulty": "medium",
+    "failure_modes": [
+      "label title",
+      "leads with TAM"
+    ]
+  },
+  "tags": [
+    "market-sizing",
+    "title"
+  ],
+  "rubric_notes": [
+    "Should pair scale with the regulatory-tailwind wedge."
+  ]
+}

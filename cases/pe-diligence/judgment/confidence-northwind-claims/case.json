@@ -1,0 +1,47 @@
+{
+  "kind": "judgment",
+  "suite": "Riplo Consulting v1",
+  "dataset_split": "dev",
+  "title": "Calibrate confidence on the Northwind claims",
+  "guidance": "Reward calibration that varies with the strength of the evidence and reads cleanly as a table. Penalise blanket confidence or uncalibrated ratings.",
+  "output_spec": {
+    "target": "Confidence table",
+    "parts": [
+      {
+        "type": "table",
+        "label": "Calibration",
+        "note": "Claim | Confidence | Rationale"
+      }
+    ]
+  },
+  "runner_input": {
+    "instruction": "Rate the confidence of each claim/assumption below and give a one-line rationale.",
+    "constraints": "Output: a markdown table with exactly these columns: Claim | Confidence | Rationale."
+  },
+  "source_blocks": [
+    {
+      "type": "bullets",
+      "items": [
+        "Claim A: NRR is 121%. Evidence: reported and cohort-backed (strong).",
+        "Claim B: The fraud model is a durable differentiator. Evidence: 22% chargeback cut, single pilot (medium).",
+        "Claim C: Take rate holds at 0.29% to FY30. Evidence: plan assumption; ignores the interchange review (thin).",
+        "Claim D: Top-5 concentration is manageable. Evidence: 41% of volume, two on rolling contracts (contested)."
+      ]
+    }
+  ],
+  "hidden_metadata": {
+    "domain": "pe-diligence",
+    "difficulty": "medium",
+    "failure_modes": [
+      "blanket confidence",
+      "treats the thin claim as strong"
+    ]
+  },
+  "tags": [
+    "pe-diligence",
+    "calibration"
+  ],
+  "rubric_notes": [
+    "A=High, B=Medium, C=Low (ignores interchange), D=Medium/contested. Reject C High."
+  ]
+}

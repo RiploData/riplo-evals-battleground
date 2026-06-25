@@ -1,0 +1,48 @@
+{
+  "kind": "pyramid-restructure",
+  "suite": "Riplo Consulting v1",
+  "dataset_split": "dev",
+  "title": "Restructure the Northwind note answer-first",
+  "guidance": "Reward an answer-first structure with clean, well-nested bullets. Penalise keeping the build-up or burying the recommendation.",
+  "output_spec": {
+    "target": "Restructured note",
+    "parts": [
+      {
+        "type": "title",
+        "label": "Recommendation",
+        "note": "bold first line"
+      },
+      {
+        "type": "bullets",
+        "label": "Nested support",
+        "note": "claims + indented evidence"
+      }
+    ]
+  },
+  "runner_input": {
+    "instruction": "Restructure the note below so the recommendation leads, then the supporting arguments with their evidence.",
+    "constraints": "Output: markdown — a bold recommendation on the first line, then nested bullets (top-level claims, with evidence indented beneath each)."
+  },
+  "source_blocks": [
+    {
+      "type": "text",
+      "text": "Top-5 merchants are 41% of volume, two on rolling annual contracts. An interchange review is pending that could cut 3–5bps. The ledger has a single owner with no succession. Growth is 38% and NRR 121%, so the franchise is strong. But the downside cases cluster around concentration, regulation and key-person risk, so we should make the deal conditional on merchant diversification and a ledger-succession plan. Therefore, proceed with two conditions precedent."
+    }
+  ],
+  "hidden_metadata": {
+    "domain": "pe-diligence",
+    "difficulty": "hard",
+    "failure_modes": [
+      "recommendation buried",
+      "no nesting"
+    ]
+  },
+  "tags": [
+    "pe-diligence",
+    "structure"
+  ],
+  "rubric_notes": [
+    "Line 1: proceed, conditional on merchant diversification + ledger succession.",
+    "Nest the three risks as supporting bullets."
+  ]
+}

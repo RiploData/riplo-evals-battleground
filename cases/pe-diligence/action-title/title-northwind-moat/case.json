@@ -1,0 +1,51 @@
+{
+  "kind": "action-title",
+  "suite": "Riplo Consulting v1",
+  "dataset_split": "dev",
+  "title": "Title the Northwind moat slide",
+  "guidance": "Reward a title that states the takeaway as a claim and reads like an MBB action title. Penalise topic labels or anything unsupported by the body.",
+  "output_spec": {
+    "target": "Slide title",
+    "parts": [
+      {
+        "type": "title",
+        "label": "Title",
+        "note": "single line, no body"
+      }
+    ]
+  },
+  "runner_input": {
+    "instruction": "Write the slide title as the takeaway of the body below.",
+    "constraints": "Output: a single title line only. No body, no bullets, no colon-subtitle."
+  },
+  "source_blocks": [
+    {
+      "type": "text",
+      "text": "Working title: 'Competitive moat'"
+    },
+    {
+      "type": "bullets",
+      "items": [
+        "Direct scheme connections (Visa/Mastercard) — multi-year to replicate",
+        "14 acquiring-bank integrations live",
+        "Merchant switching cost: re-integration + re-certification",
+        "Fraud model trained on 5 years of proprietary transaction data"
+      ]
+    }
+  ],
+  "hidden_metadata": {
+    "domain": "pe-diligence",
+    "difficulty": "easy",
+    "failure_modes": [
+      "label title",
+      "generic"
+    ]
+  },
+  "tags": [
+    "pe-diligence",
+    "title"
+  ],
+  "rubric_notes": [
+    "Should assert switching cost / scheme connections are hard to replicate."
+  ]
+}

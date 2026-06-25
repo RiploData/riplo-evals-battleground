@@ -1,0 +1,42 @@
+{
+  "kind": "register-switch",
+  "suite": "Riplo Consulting v1",
+  "dataset_split": "dev",
+  "title": "Render the portfolio-signal prose as bullets",
+  "guidance": "Reward bullet(s) at the right density for a body slide — crisp and telegraphic but still parseable. The rater judges whether the density is right.",
+  "output_spec": {
+    "target": "Body-slide bullet(s)",
+    "parts": [
+      {
+        "type": "bullets",
+        "label": "Bullet(s)",
+        "note": "model chooses density"
+      }
+    ]
+  },
+  "runner_input": {
+    "instruction": "Render the text below as a body-slide bullet or bullets.",
+    "constraints": "Output: a markdown bullet, or a series of bullets. You decide how many and how dense."
+  },
+  "source_blocks": [
+    {
+      "type": "text",
+      "text": "Across the portfolio, the firms that adopted the new outcome-based pricing model earlier saw faster net revenue retention, and although the sample is small and the period short, the direction of travel is consistent enough that it is worth flagging to the operating partners as an early but encouraging signal."
+    }
+  ],
+  "hidden_metadata": {
+    "domain": "cross",
+    "difficulty": "hard",
+    "failure_modes": [
+      "stays prose-y",
+      "over-states a small-sample signal"
+    ]
+  },
+  "tags": [
+    "cross",
+    "telegraphic"
+  ],
+  "rubric_notes": [
+    "Should keep the calibration (small sample, short period) while compressing — density judged by rater."
+  ]
+}

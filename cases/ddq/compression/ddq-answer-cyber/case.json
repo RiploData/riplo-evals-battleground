@@ -1,0 +1,51 @@
+{
+  "kind": "compression",
+  "suite": "Riplo Consulting v1",
+  "dataset_split": "dev",
+  "title": "Draft the cyber DDQ answer from the evidence",
+  "guidance": "Reward an answer that addresses the exact question from the evidence given, concisely and in a credible institutional voice.",
+  "output_spec": {
+    "target": "DDQ answer",
+    "parts": [
+      {
+        "type": "text",
+        "label": "Answer",
+        "note": "<=120 words prose"
+      }
+    ]
+  },
+  "runner_input": {
+    "instruction": "Draft the answer to the LP question using only the evidence provided.",
+    "constraints": "Output: prose only, max 120 words. No headings, no bullets."
+  },
+  "source_blocks": [
+    {
+      "type": "text",
+      "text": "LP question: Describe the firm's information-security posture and any incident history."
+    },
+    {
+      "type": "bullets",
+      "items": [
+        "Cyber Essentials Plus certified; annual third-party penetration test",
+        "One phishing incident in 2024, contained within 24h, no data loss; post-incident review completed",
+        "MFA and SSO enforced; SOC 2 not yet held, targeted for 2026"
+      ]
+    }
+  ],
+  "hidden_metadata": {
+    "domain": "ddq",
+    "difficulty": "medium",
+    "failure_modes": [
+      "over-length",
+      "claims SOC 2 it doesn't have",
+      "omits the incident"
+    ]
+  },
+  "tags": [
+    "ddq",
+    "cyber"
+  ],
+  "rubric_notes": [
+    "Must cover posture + incident history honestly, including that SOC 2 is targeted not held, and the 2024 incident was contained."
+  ]
+}

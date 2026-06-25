@@ -3,7 +3,7 @@ import { requireUser, requireRole } from '@/auth/workos';
 import { enqueueMissingForCampaign } from '@/services/generate-batch';
 import type { ApiError } from '@/types/contracts';
 
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   let user;

@@ -1,0 +1,43 @@
+{
+  "kind": "de-slop",
+  "suite": "Riplo Consulting v1",
+  "dataset_split": "dev",
+  "title": "De-slop the Halden exec-summary paragraph",
+  "guidance": "Reward prose that reads like an experienced MBB analyst wrote it, with every fact preserved. Penalise residual AI tells or any changed figure.",
+  "output_spec": {
+    "target": "Rewritten text",
+    "parts": [
+      {
+        "type": "text",
+        "label": "Rewrite",
+        "note": "one paragraph, same shape as source"
+      }
+    ]
+  },
+  "runner_input": {
+    "instruction": "Rewrite the text below so it reads like an experienced MBB analyst wrote it for a PE audience. Keep every fact.",
+    "constraints": "Output: the rewritten text in the same shape as the source (one paragraph)."
+  },
+  "source_blocks": [
+    {
+      "type": "text",
+      "text": "It's worth noting that Halden represents a truly remarkable tapestry of opportunity in the ever-evolving landscape of food-safety compliance. This isn't just a software business — it's an institutionally-bestowed moat. As we delve into the numbers, the £11.2m ARR and 112% NRR quietly underscore a fundamentally robust foundation. Despite its challenges, the company stands as a testament to durable demand. In conclusion, the opportunity is clear."
+    }
+  ],
+  "hidden_metadata": {
+    "domain": "pe-diligence",
+    "difficulty": "easy",
+    "failure_modes": [
+      "leaves tells",
+      "changes a figure",
+      "over-blands"
+    ]
+  },
+  "tags": [
+    "pe-diligence",
+    "exec-summary"
+  ],
+  "rubric_notes": [
+    "£11.2m ARR and 112% NRR must survive; cut tapestry/landscape/delve/quietly/testament/'this isn't X — it's Y'/'Despite its challenges'/'In conclusion'."
+  ]
+}

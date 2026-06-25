@@ -1,0 +1,51 @@
+{
+  "kind": "action-title",
+  "suite": "Riplo Consulting v1",
+  "dataset_split": "dev",
+  "title": "Title the Halden capability slide",
+  "guidance": "Reward a title that states the takeaway as a claim and reads like an MBB action title. Penalise topic labels or anything unsupported by the body.",
+  "output_spec": {
+    "target": "Slide title",
+    "parts": [
+      {
+        "type": "title",
+        "label": "Title",
+        "note": "single line, no body"
+      }
+    ]
+  },
+  "runner_input": {
+    "instruction": "Write the slide title as the takeaway of the body below.",
+    "constraints": "Output: a single title line only. No body, no bullets, no colon-subtitle."
+  },
+  "source_blocks": [
+    {
+      "type": "text",
+      "text": "Working title: 'Tech & AI capabilities'"
+    },
+    {
+      "type": "bullets",
+      "items": [
+        "18 eng FTE: 11 dev, 1 DevOps, 2 product, 3 QA — no named ML role",
+        "AutoSchedule 88–95% accuracy on 12,000 SKUs",
+        "Model calls via vendor API; CTO praised",
+        "No written AI roadmap shared"
+      ]
+    }
+  ],
+  "hidden_metadata": {
+    "domain": "pe-diligence",
+    "difficulty": "medium",
+    "failure_modes": [
+      "label title",
+      "overclaims capability"
+    ]
+  },
+  "tags": [
+    "pe-diligence",
+    "title"
+  ],
+  "rubric_notes": [
+    "Should land 'real AI shipped, but ML ownership unproven'."
+  ]
+}

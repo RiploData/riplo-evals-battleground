@@ -1,0 +1,43 @@
+{
+  "kind": "register-switch",
+  "suite": "Riplo Consulting v1",
+  "dataset_split": "dev",
+  "title": "Render the Halden capability prose as bullets",
+  "guidance": "Reward bullet(s) at the right density for a body slide — crisp and telegraphic but still parseable. The rater judges whether the density is right.",
+  "output_spec": {
+    "target": "Body-slide bullet(s)",
+    "parts": [
+      {
+        "type": "bullets",
+        "label": "Bullet(s)",
+        "note": "model chooses density"
+      }
+    ]
+  },
+  "runner_input": {
+    "instruction": "Render the text below as a body-slide bullet or bullets.",
+    "constraints": "Output: a markdown bullet, or a series of bullets. You decide how many and how dense."
+  },
+  "source_blocks": [
+    {
+      "type": "text",
+      "text": "The engineering team is eighteen full-time staff, roughly twenty-seven percent of the company, and together with product and the food-safety authors it is close to half of all headcount. The ratio is about two product people to thirteen developers, which is probably too development-heavy and likely makes product the bottleneck for adopting a more AI-native way of building. Voluntary attrition is low at six point one percent, complaints on Glassdoor concentrate on sales rather than engineering, and there is consistently positive feedback on the chief technology officer."
+    }
+  ],
+  "hidden_metadata": {
+    "domain": "pe-diligence",
+    "difficulty": "medium",
+    "failure_modes": [
+      "stays prose-y",
+      "undefined acronym",
+      "too sparse to be useful"
+    ]
+  },
+  "tags": [
+    "pe-diligence",
+    "telegraphic"
+  ],
+  "rubric_notes": [
+    "Density is the test: should compress to a few crisp bullets, e.g. 'Eng 18 FTE (~27% of co); prod/dev 2:13 — likely bottleneck'."
+  ]
+}

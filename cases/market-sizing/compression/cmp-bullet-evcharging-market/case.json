@@ -1,0 +1,52 @@
+{
+  "kind": "compression",
+  "suite": "Riplo Consulting v1",
+  "dataset_split": "dev",
+  "title": "Compress the EV-charging sizing to one bullet",
+  "guidance": "Reward the bullet that packs the most decision-relevant content into the fewest words and reads like a partner wrote it. Penalise padding, vagueness, or an AI 'feel'.",
+  "output_spec": {
+    "target": "Single IC-slide bullet",
+    "parts": [
+      {
+        "type": "bullet",
+        "label": "Bullet",
+        "note": "one markdown bullet, <=30 words"
+      }
+    ]
+  },
+  "runner_input": {
+    "instruction": "Capture the essence of the material below in a single bullet for an IC slide.",
+    "constraints": "Output: exactly one markdown bullet (start with '- '). Max 30 words. No title, no second bullet."
+  },
+  "source_blocks": [
+    {
+      "type": "text",
+      "text": "UK commercial EV-charging installation market. Synthetic."
+    },
+    {
+      "type": "bullets",
+      "items": [
+        "Commercial charging install + maintenance; ~£1.4bn annual market by 2030",
+        "Drivers: 2035 ICE-sales ban, fleet-electrification mandates, workplace-charging grants",
+        "Installer base highly fragmented; top 10 hold <20% share",
+        "Bottleneck: grid-connection lead times of 9–18 months cap near-term volume",
+        "Hardware commoditising; value shifting to software + maintenance contracts"
+      ]
+    }
+  ],
+  "hidden_metadata": {
+    "domain": "market-sizing",
+    "difficulty": "hard",
+    "failure_modes": [
+      "ignores the grid-connection bottleneck",
+      "pure size statement"
+    ]
+  },
+  "tags": [
+    "market-sizing",
+    "ev"
+  ],
+  "rubric_notes": [
+    "Should note the £1.4bn-by-2030 size AND the grid-connection bottleneck that caps it."
+  ]
+}

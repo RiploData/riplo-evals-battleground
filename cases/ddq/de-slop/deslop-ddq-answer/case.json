@@ -1,0 +1,42 @@
+{
+  "kind": "de-slop",
+  "suite": "Riplo Consulting v1",
+  "dataset_split": "dev",
+  "title": "De-slop the ESG DDQ answer",
+  "guidance": "Reward prose that reads like an experienced MBB analyst wrote it, with every fact preserved. Penalise residual AI tells or any changed figure.",
+  "output_spec": {
+    "target": "Rewritten text",
+    "parts": [
+      {
+        "type": "text",
+        "label": "Rewrite",
+        "note": "one paragraph, same shape as source"
+      }
+    ]
+  },
+  "runner_input": {
+    "instruction": "Rewrite the text below so it reads like an experienced MBB analyst wrote it for a PE audience. Keep every fact.",
+    "constraints": "Output: the rewritten text in the same shape as the source (one paragraph)."
+  },
+  "source_blocks": [
+    {
+      "type": "text",
+      "text": "It's worth noting that our firm's approach to ESG is a deeply embedded, ever-evolving tapestry. We don't just consider ESG — we live it. As we delve into our process, every IC memo quietly reflects a fundamentally robust commitment. Despite the challenges of measurement, we stand as a testament to responsible investing."
+    }
+  ],
+  "hidden_metadata": {
+    "domain": "ddq",
+    "difficulty": "medium",
+    "failure_modes": [
+      "leaves tells",
+      "stays vague / no substance"
+    ]
+  },
+  "tags": [
+    "ddq",
+    "esg"
+  ],
+  "rubric_notes": [
+    "Should become a plain, credible institutional answer; cut tapestry/delve/quietly/testament/'we don't just X — we live it'."
+  ]
+}
